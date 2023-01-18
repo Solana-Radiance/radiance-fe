@@ -1,0 +1,38 @@
+.nfts-page {
+    background-color: black;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    > div.search {
+        max-width: 800px;
+        width: 100%;
+        margin-top: 20px;
+
+        > input {
+            width: 100%;
+            height: 40px;
+            border-radius: 5px;
+            color: black;
+            text-align: center;
+            outline: none;
+    
+            &.invalid {
+                border: 1px solid red;
+            }
+        }
+
+        > i {
+            font-size: 30px;
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            color: black;
+
+            &.fa-times {
+                color: red;
+            }
+        }
+    }
+}

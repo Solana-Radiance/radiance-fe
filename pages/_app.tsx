@@ -1,7 +1,10 @@
 import 'tailwindcss/tailwind.css';
 import '../styles/globals.scss';
 import '@dialectlabs/react-ui/index.css';
-import './index.scss';
+import './home/index.scss';
+import './swaps/styles.scss';
+import './nfts/styles.scss';
+import './stakes/styles.scss';
 
 import React, { useCallback, useEffect , useState } from 'react';
 import type { AppProps } from 'next/app';
@@ -40,6 +43,8 @@ import { ADDRESS_LENGTH } from '../constants/numbers';
 
 import logo from '../components/Icon/assets/logo-kida.png';
 import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
 
 // TODO: Use useTheme instead of explicitly importing defaultVariables
 export const themeVariables: IncomingThemeVariables = {
@@ -71,11 +76,7 @@ function PageLayout({ Component, pageProps }: LayoutProps) {
   const { connection: solanaConnection } = useSolanaConnection();
   const [address, setAddress] = useState("");
   const solanaWallet = useSolanaWallet();
-  const [currentPath, setCurrentPath] = useState("");
-
-  useEffect(() => {
-    setCurrentPath(window.location.pathname);
-  }, []);
+  const router = useRouter();
 
   const [dialectSolanaWalletAdapter, setDialectSolanaWalletAdapter] =
     useState<DialectSolanaWalletAdapter | null>(null);
@@ -139,18 +140,51 @@ function PageLayout({ Component, pageProps }: LayoutProps) {
                   <Image src={logo} alt="" />
                 </div>
               </div>
-              <a href={`/${address}`} className={currentPath === `/${address}` || currentPath === '/'? "active" : ""}>
-                <div>Home</div>
-              </a>
-              <a href={`/swaps/${address}`} className={currentPath === `/swaps/${address}`? "active" : ""}>
-                <div>Swaps</div>
-              </a>
-              <a href={`/nfts/${address}`} className={currentPath === `/nfts/${address}`? "active" : ""}>
-                <div>NFTs</div>
-              </a>
-              <a href={`/stakes/${address}`} className={currentPath === `/stakes/${address}`? "active" : ""}>
-                <div>Stakes</div>
-              </a>
+              <div
+                className={"link " + (router.pathname === "/home/[[...defaultAddress]]"? "active" : "")}
+              >
+                <Link 
+                  href={{
+                    pathname: `/home/${address}`,
+                  }} 
+                >
+                  <div>Home</div>
+                </Link>
+              </div>
+              <div
+                className={"link " + (router.pathname === "/swaps/[defaultAddress]"? "active" : "")}
+              >
+                <Link 
+                  href={{
+                    pathname: `/swaps/${address}`,
+                  }} 
+                >
+                  <div>Swaps</div>
+                </Link>
+              </div>
+              <div
+                className={"link " + (router.pathname === "/nfts/[defaultAddress]"? "active" : "")}
+              >
+                <Link 
+                  href={{
+                    pathname: `/nfts/${address}`,
+                  }} 
+                >
+                  <div>NFTs</div>
+                </Link>
+
+              </div>
+              <div
+                className={"link " + (router.pathname === "/stakes/[defaultAddress]"? "active" : "")}
+              >
+                <Link 
+                  href={{
+                    pathname: `/stakes/${address}`,
+                  }} 
+                >
+                  <div>Stakes</div>
+                </Link>
+              </div>
             </div>
             <Component 
               {...pageProps} 

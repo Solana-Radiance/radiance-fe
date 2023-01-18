@@ -1,6 +1,6 @@
-export interface HomeProps {
-    handleSearch: (address: string) => void;
-}
+import { BaseProps } from "../_app-type";
+
+export interface HomeProps extends BaseProps {}
 
 export interface BalanceData {
     date: string;

@@ -1,18 +1,22 @@
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { GetProgramAccountsFilter, PublicKey } from '@solana/web3.js';
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { MultiBarGraph } from '../components/MultiBarGraph';
-import { MultiLineGraph } from '../components/MultiLineGraph';
-import { ADDRESS_LENGTH } from '../constants/numbers';
-import { NFT_TX_QUERY, TOKEN_DETAILS_QUERY, WALLET_BALANCE_QUERY, WALLET_DEFI_RANKING_QUERY, WALLET_NFT_RANKING_QUERY } from '../constants/queries';
-import { ellipsizeThis, runIfFunction, toLocaleDecimal, toShortNumber } from '../utils/common';
-import { query } from '../utils/flipside';
-import { getAddressNames, getAddressNFTs } from '../utils/helius';
-import { NFT } from '../utils/helius-type';
-import { BalanceData, HomeProps, NFTData, RankData, TokenBalances, TokenData } from './index-type';
+import { MultiBarGraph } from '../../components/MultiBarGraph';
+import { MultiLineGraph } from '../../components/MultiLineGraph';
+import { ADDRESS_LENGTH } from '../../constants/numbers';
+import { NFT_TX_QUERY, TOKEN_DETAILS_QUERY, WALLET_BALANCE_QUERY, WALLET_DEFI_RANKING_QUERY, WALLET_NFT_RANKING_QUERY } from '../../constants/queries';
+import { ellipsizeThis, runIfFunction, toLocaleDecimal, toShortNumber } from '../../utils/common';
+import { query } from '../../utils/flipside';
+import { getAddressNames, getAddressNFTs } from '../../utils/helius';
+import { NFT } from '../../utils/helius-type';
+import { BalanceData, HomeProps, NFTData, RankData, TokenBalances, TokenData } from './types';
 import moment from 'moment';
+import { useRouter } from 'next/router';
+import Link from 'next/link';
 
 const Home = ({ handleSearch }: HomeProps) => {
+  const router = useRouter()
+  const { defaultAddress } = router.query;
   const [address, setAddress] = useState("");
   const [data, setData] = useState<BalanceData[]>([]);
   const [nftRankData, setNFtRankData] = useState<RankData[]>([]);
@@ -29,6 +33,25 @@ const Home = ({ handleSearch }: HomeProps) => {
   const lastQueriedAddress = useRef("");
   const {connection} = useConnection();
   const solanaWallet = useWallet();
+  
+
+  useEffect(() => {
+    if(!defaultAddress) {
+      return;
+    }
+    
+    if(typeof defaultAddress === "string") {
+      console.log('setting default address: ' + defaultAddress);
+      setAddress(defaultAddress);
+      handleSearch(defaultAddress);
+      return;
+    }
+
+    console.log('setting default address');
+    setAddress(defaultAddress[0] ?? "");
+    console.log('setting default address: ' + (defaultAddress[0] ?? ""));
+    handleSearch(defaultAddress[0] ?? "");
+  }, [defaultAddress]);
 
   const onAddressInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     let address = e.target.value;
@@ -197,6 +220,7 @@ const Home = ({ handleSearch }: HomeProps) => {
     // dont search twice
     if(lastQueriedAddress.current === address && !isSearching) {
       runIfFunction(handleSearch, address);
+      return;
     }
 
     if(isSearching || lastQueriedAddress.current === address) {
@@ -204,6 +228,7 @@ const Home = ({ handleSearch }: HomeProps) => {
     }
 
     if(address.length === 0) {
+      console.log('hanlding search 2: ' + address)
       runIfFunction(handleSearch, address);
       return;
     }
@@ -214,8 +239,11 @@ const Home = ({ handleSearch }: HomeProps) => {
     
     setIsSearching(true);
 
-    // reset layout
-    runIfFunction(handleSearch, "");
+    // only reset layout if it's not searched
+    if(!defaultAddress) {
+      console.log('hanlding search 3: ' + "")
+      runIfFunction(handleSearch, "");
+    }
     lastQueriedAddress.current = address;
 
     //get associated token accounts that stores the SPL tokens
@@ -288,6 +316,7 @@ const Home = ({ handleSearch }: HomeProps) => {
 
       // first search finished, update layout
       setIsSearching(false);
+      console.log('hanlding search 4: ' + address)
       runIfFunction(handleSearch, address);
 
       // fs starts querying
@@ -300,8 +329,6 @@ const Home = ({ handleSearch }: HomeProps) => {
       let nftRankSql = WALLET_NFT_RANKING_QUERY.replace(/{{address}}/g, address);
       let tokenDetailsSql = TOKEN_DETAILS_QUERY.replace(/{{address}}/g, mints.join("','"));
       let nftTxSql = NFT_TX_QUERY.replace(/{{address}}/g, address).replace(/{{mints}}/g, nfts.map(x => x.tokenAddress).join("','"));
-
-      console.log(nftTxSql);
 
       let [/* data,  */volumeRankData, nftRankData, tokenData, nftData] = await Promise.all([
         //query<BalanceData>(balanceSql),
@@ -366,6 +393,7 @@ const Home = ({ handleSearch }: HomeProps) => {
 
   return (
       <div className='home-page'>
+          {/** is searching valid address or has a default address */}
           <strong className={!isSearching && address.length === ADDRESS_LENGTH? 'hidden' : ''}>Search any address or connect your wallet to get started!</strong>
           <div className='relative search'>
             <input type="text" placeholder='Solana Address' value={address} onChange={onAddressInputChange} disabled={isSearching || isFSQuerying}/>
@@ -378,6 +406,7 @@ const Home = ({ handleSearch }: HomeProps) => {
               <i className="fa fa-spin fa-spinner"></i>
             }
           </div>
+          {/** is searching valid address or has a default address */}
           <div className={`${!isSearching && address.length === ADDRESS_LENGTH? 'flex' : 'hidden'} h-full profile`}>
             <div className="details-container">
               <div className="pfp-container">
@@ -561,7 +590,7 @@ const Home = ({ handleSearch }: HomeProps) => {
                           </div>
                           
                           {
-                            isFSQuerying? 'Loading..' : <a href={`https://solana.fm/tx/${activeNftData?.tx_id}`} target="_blank" rel="noopener noreferrer">{ellipsizeThis(activeNftData?.tx_id ?? "", 4, 4)}</a> 
+                            isFSQuerying? 'Loading..' : <Link href={`https://solana.fm/tx/${activeNftData?.tx_id}`} target="_blank" rel="noopener noreferrer">{ellipsizeThis(activeNftData?.tx_id ?? "", 4, 4)}</Link> 
                           }
                         </div>
                     </div>
