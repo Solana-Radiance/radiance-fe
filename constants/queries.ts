@@ -439,7 +439,7 @@ from solana.core.ez_token_prices_hourly p
 group by 1, 2, 3
 )
     
-    select 
+    select distinct
       t.block_timestamp,
       t.tx_id,
       t.tx_from,
@@ -482,7 +482,7 @@ group by 1, 2, 3
 )
 
   
-    select 
+    select distinct
   		s.block_timestamp,
   		s.tx_id,
   		coalesce(upper(p.symbol), swap_from_mint) as symbol_from,
@@ -505,7 +505,7 @@ group by 1, 2, 3
     from solana.core.ez_staking_lp_actions
     where stake_authority = '{{address}}'
   )
-    select
+  select distinct
         block_timestamp,
         tx_id,
         index,
@@ -519,3 +519,63 @@ group by 1, 2, 3
       and succeeded 
       and event_type in ('delegate', 'withdraw', 'merge_source', 'merge_destination')
   order by 1 desc`;
+
+  export const WALLET_NFT_TXS_QUERY = `
+  with sol_prices as (
+      select 
+        date(block_timestamp) as date,
+        replace(feed_name, ' / USD') as symbol,
+        median(coalesce(latest_answer_adj, latest_answer_unadj / pow(10,8))) as price --using median cause there will be some nulls / zeroes
+      from ethereum.chainlink.ez_oracle_feeds
+      where feed_category = 'Cryptocurrency (USD pairs)'
+        and feed_name in ('SOL / USD')
+      group by 1,2
+      order by 1
+    ),
+    
+  prices as (
+  select 
+    date(recorded_hour) as date,
+    token_address,
+    symbol,
+    avg(close) as price
+  from solana.core.ez_token_prices_hourly p
+  group by 1, 2, 3
+  ),
+  
+  nfts as (
+    select distinct mint
+    from solana.core.fact_nft_mints
+  )
+      
+      select distinct
+        t.block_timestamp,
+        t.tx_id,
+        t.tx_from,
+        t.tx_to,
+        t.mint,
+        case 
+        when s.sales_amount is not null and t.tx_to in ('{{address}}') then 'Bought'
+        when s.sales_amount is not null and t.tx_from in ('{{address}}') then 'Sold'
+        when m.mint_price is not null then 'Minted'
+        when t.tx_from in ('{{address}}') then 'Sent Out'
+        else 'Gifted' end as obtained_by,
+        coalesce(upper(tk.symbol), m.mint_currency, 'SOL') as currency,
+        coalesce(s.sales_amount, m.mint_price, 0) as amount_currency,
+        case 
+        when s.sales_amount is not null then amount_currency * coalesce(p.price, 0)
+        else amount_currency * coalesce(p2.price, 0) 
+        end as amount_usd
+      from solana.core.fact_transfers t
+      left join solana.core.fact_nft_sales s
+      on s.mint = t.mint and s.tx_id = t.tx_id
+      left join solana.core.fact_nft_mints m
+      on s.mint = t.mint and m.tx_id = t.tx_id
+      left join solana.core.dim_tokens tk
+      on m.mint_currency = tk.token_address
+      left join sol_prices p
+      on p.date = t.block_timestamp::date
+      left join prices p2
+      on p2.date = t.block_timestamp::date and p2.token_address = m.mint_currency
+      where (t.tx_to in ('{{address}}') or t.tx_from in ('{{address}}')) and t.mint in (select mint from nfts)
+    order by block_timestamp desc`;

@@ -146,6 +146,7 @@ const Stakes = ({ handleSearch }: StakesProps) => {
     //reset
     setStakeData([]);
     setStakedSols(0);
+    setTxData([]);
 
     lastQueriedAddress.current = address;
 
@@ -239,58 +240,58 @@ const Stakes = ({ handleSearch }: StakesProps) => {
                 />
               </div>
             </div>
-              <div className="table-container">
-                <div className="flex justify-between text-xl">
-                  <strong>Transactions</strong>
-                  <CSVLink className="btn btn-lg btn-info mt-2 max-width-button" data={csvData} filename={'stakes.csv'} target="_blank">Download</CSVLink>
-                </div>
-                <div className='table'>
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Date</th>
-                        <th>Tx ID</th>
-                        <th>Type</th>
-                        <th>Details</th>
-                        <th>Net</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                        {
-                          filteredTxs.length > 0 &&
-                          filteredTxs.map(x => (
-                            <tr key={x.tx_id} className='h-[90px]'>
-                              <td className='text-center'>{moment(x.block_timestamp).format('YYYY-MM-DD HH:mm:ss')}</td>
-                              <td className='text-center'><a href={`https://solana.fm/tx/${x.tx_id}`} target="_blank" rel="noopener noreferrer">{ellipsizeThis(x.tx_id, 4, 4)}</a></td>
-                              <td className='text-center'><strong className={`${x.net_deposit_amount < 0? 'text-red-300' : 'text-green-300'}`}>{x.event_type}</strong></td>
-                              <td className='text-center'>
-                                <div className='flex items-center justify-center'>
-                                  <div className='flex flex-col w-[200px]'>
-                                    <span>{toShortNumber(x.pre_tx_staked_balance_adj, 2)} <strong>SOL</strong></span>
-                                  </div>
-                                  <span>➜</span>
-                                  <div className='flex flex-col w-[200px]'>
-                                    <span>{toShortNumber(x.post_tx_staked_balance_adj, 2)} <strong>SOL</strong></span>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className='text-center'><strong className={`${x.net_deposit_amount < 0? 'text-red-300' : 'text-green-300'}`}>{toLocaleDecimal(x.net_deposit_amount, 2, 2)}</strong></td>
-                            </tr>
-                          ))
-                        }
-                    </tbody>
-                  </table>
-                </div>
-                <div className='flex w-[100px] justify-between ml-5 mt-3'>
-                  <button onClick={onLeftClick}>
-                    <i className="fa fa-chevron-left"></i>
-                  </button>
-                  <span>{txPage + 1} / {Math.floor(txData.length / DATA_PER_PAGE) + 1}</span>
-                  <button onClick={onRightClick}>
-                    <i className="fa fa-chevron-right"></i>
-                  </button>
-                </div>
+            <div className="table-container">
+              <div className="flex justify-between text-xl">
+                <strong>Transactions</strong>
+                <CSVLink className="btn btn-lg btn-info mt-2 max-width-button" data={csvData} filename={'stakes.csv'} target="_blank">Download</CSVLink>
               </div>
+              <div className='table'>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Tx ID</th>
+                      <th>Type</th>
+                      <th>Details</th>
+                      <th>Net</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                      {
+                        filteredTxs.length > 0 &&
+                        filteredTxs.map((x, index) => (
+                          <tr key={x.tx_id + index.toString()} className='h-[90px]'>
+                            <td className='text-center'>{moment(x.block_timestamp).format('YYYY-MM-DD HH:mm:ss')}</td>
+                            <td className='text-center'><a href={`https://solana.fm/tx/${x.tx_id}`} target="_blank" rel="noopener noreferrer">{ellipsizeThis(x.tx_id, 4, 4)}</a></td>
+                            <td className='text-center'><strong className={`${x.net_deposit_amount < 0? 'text-red-300' : 'text-green-300'}`}>{x.event_type}</strong></td>
+                            <td className='text-center'>
+                              <div className='flex items-center justify-center'>
+                                <div className='flex flex-col w-[200px]'>
+                                  <span>{toShortNumber(x.pre_tx_staked_balance_adj, 2)} <strong>SOL</strong></span>
+                                </div>
+                                <span>➜</span>
+                                <div className='flex flex-col w-[200px]'>
+                                  <span>{toShortNumber(x.post_tx_staked_balance_adj, 2)} <strong>SOL</strong></span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className='text-center'><strong className={`${x.net_deposit_amount < 0? 'text-red-300' : 'text-green-300'}`}>{toLocaleDecimal(x.net_deposit_amount, 2, 2)}</strong></td>
+                          </tr>
+                        ))
+                      }
+                  </tbody>
+                </table>
+              </div>
+              <div className='flex w-[100px] justify-between ml-5 mt-3'>
+                <button onClick={onLeftClick}>
+                  <i className="fa fa-chevron-left"></i>
+                </button>
+                <span>{txPage + 1} / {Math.floor(txData.length / DATA_PER_PAGE) + 1}</span>
+                <button onClick={onRightClick}>
+                  <i className="fa fa-chevron-right"></i>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
     );

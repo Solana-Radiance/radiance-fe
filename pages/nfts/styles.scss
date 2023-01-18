@@ -53,4 +53,81 @@
             width: 100%;
         }
     }
+    
+
+    .table-container {
+        width: 100%;
+        margin-top: 20vh;
+
+        > div.table {
+            height: 1000px;
+            border: 1px solid white;
+            border-radius: 10px;
+            width: 100%;
+            margin-top: 10px;
+
+            > table {
+                margin-top: 5px;
+                width: 100%;
+                border-collapse: collapse;
+                height: 100%;
+
+                thead {
+
+                    tr {
+                        border-bottom: 1px solid rgba(255,255,255,0.2);
+
+                        th {
+                            padding: 10px 0;
+                        }
+
+                        th:nth-child(1) {
+                            width: 16%;
+                        }
+                        th:nth-child(2) {
+                            width: 16%;
+                        }
+                        th:nth-child(3) {
+                            width: 16%;
+                        }
+                        th:nth-child(4) {
+                            width: 16%;
+                        }
+                        th:nth-child(5) {
+                            width: 16%;
+                        }
+                    }
+
+                }
+    
+                tbody {
+                    height: 100%;
+
+                    tr {
+                        border-bottom: 1px solid rgba(255,255,255,0.2);
+
+                        td:nth-child(1) {
+                            width: 16%;
+                        }
+                        td:nth-child(2) {
+                            width: 16%;
+                        }
+                        td:nth-child(3) {
+                            width: 16%;
+                        }
+                        td:nth-child(4) {
+                            width: 16%;
+                        }
+                        td:nth-child(5) {
+                            width: 16%;
+                        }
+
+                        &:last-child {
+                            border-bottom: none;
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

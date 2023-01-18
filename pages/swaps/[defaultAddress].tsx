@@ -37,7 +37,6 @@ const Swaps = ({ handleSearch }: SwapsProps) => {
     const filteredTxs = useMemo(() => {
       let newData = [];
       for(var i = txPage * DATA_PER_PAGE; i < (txPage + 1) * DATA_PER_PAGE; i++) {
-        console.log(i)
         if(i === txData.length) {
           //end of data
           break;
@@ -310,8 +309,8 @@ const Swaps = ({ handleSearch }: SwapsProps) => {
                     <tbody>
                         {
                           filteredTxs.length > 0 &&
-                          filteredTxs.map(x => (
-                            <tr key={x.tx_id} className='h-[90px]'>
+                          filteredTxs.map((x, index) => (
+                            <tr key={x.tx_id + index.toString()} className='h-[90px]'>
                               <td className='text-center'>{moment(x.block_timestamp).format('YYYY-MM-DD HH:mm:ss')}</td>
                               <td className='text-center'><a href={`https://solana.fm/tx/${x.tx_id}`} target="_blank" rel="noopener noreferrer">{ellipsizeThis(x.tx_id, 4, 4)}</a></td>
                               <td className='text-center'>

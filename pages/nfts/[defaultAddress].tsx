@@ -1,13 +1,16 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import { useRouter } from 'next/router';
-import { ADDRESS_LENGTH } from '../../constants/numbers';
-import { NftsProps, VolumeData } from './types';
+import { ADDRESS_LENGTH, NFT_DATA_PER_PAGE } from '../../constants/numbers';
+import { NftMetadata, NftsProps, TxData, VolumeData } from './types';
 import { GetProgramAccountsFilter, PublicKey } from '@solana/web3.js';
-import { runIfFunction } from '../../utils/common';
+import { ellipsizeThis, runIfFunction, toLocaleDecimal, toShortNumber } from '../../utils/common';
 import { useConnection } from '@solana/wallet-adapter-react';
-import { WALLET_NFT_VOLUME_QUERY } from '../../constants/queries';
+import { WALLET_NFT_TXS_QUERY, WALLET_NFT_VOLUME_QUERY } from '../../constants/queries';
 import { query } from '../../utils/flipside';
 import { MultiBarGraph } from '../../components/MultiBarGraph';
+import { CSVLink } from 'react-csv';
+import moment from 'moment';
+import axios, { AxiosResponse } from 'axios';
 
 const Nfts = ({ handleSearch }: NftsProps) => {
     const router = useRouter()
@@ -21,6 +24,9 @@ const Nfts = ({ handleSearch }: NftsProps) => {
     const {connection} = useConnection();
 
     const [volumeData, setVolumeData] = useState<VolumeData[]>([]);
+    const [txData, setTxData] = useState<TxData[]>([]);
+    const [txPage, setTxPage] = useState(0);
+    const [nftMetadata, setNFTMetadata] = useState<NftMetadata[]>([]);
 
     const onAddressInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       let address = e.target.value;
@@ -29,6 +35,63 @@ const Nfts = ({ handleSearch }: NftsProps) => {
       setIsValidAddress(isValidAddress);
       setAddress(address);
     }, []);
+
+    const filteredTxs = useMemo(() => {
+      let newData = [];
+      for(var i = txPage * NFT_DATA_PER_PAGE; i < (txPage + 1) * NFT_DATA_PER_PAGE; i++) {
+        if(i === txData.length) {
+          //end of data
+          break;
+        }
+        newData.push(txData[i]);
+      }
+      return newData;
+    }, [txData, txPage]);
+
+    const csvData = useMemo(() => {
+      let newData = [
+        [
+          'block_timestamp',
+          'tx_id',
+          'tx_from',
+          'tx_to',
+          'mint',
+          'obtained_by',
+          'currency',
+          'amount_currency',
+          'amount_usd',
+        ]
+      ];
+      txData.forEach(x => {
+        newData.push([
+          x.block_timestamp,
+          x.tx_id,
+          x.tx_from,
+          x.tx_to,
+          x.mint,
+          x.obtained_by,
+          x.currency,
+          x.amount_currency.toString(),
+          x.amount_usd.toString(),
+        ]);
+      });
+      return newData;
+    }, [txData]);
+
+    const onLeftClick = useCallback(() => {
+      let newPage = txPage - 1;
+      if(newPage >= 0) {
+        setTxPage(newPage);
+      }
+    }, [txPage]);
+
+    const onRightClick = useCallback(() => {
+      let newPage = txPage + 1;
+      let maxPage = Math.floor(txData.length / NFT_DATA_PER_PAGE);
+      if(newPage <= maxPage) {
+        setTxPage(newPage);
+      }
+    }, [txPage, txData]);
 
     // graph data
     const volumeGraphData = useMemo(() => {
@@ -146,25 +209,27 @@ const Nfts = ({ handleSearch }: NftsProps) => {
     useEffect(() => {
         // dont search twice
         if(lastQueriedAddress.current === address && !isSearching) {
-        runIfFunction(handleSearch, address);
+          runIfFunction(handleSearch, address);
         }
 
         if(isSearching || lastQueriedAddress.current === address) {
-        return;
+          return;
         }
 
         if(address.length === 0) {
-        runIfFunction(handleSearch, address);
-        return;
+          runIfFunction(handleSearch, address);
+          return;
         }
 
         if(address.length !== ADDRESS_LENGTH) {
-        return;
+          return;
         }
         
         setIsSearching(true);
         //reset
         setVolumeData([]);
+        setTxData([]);
+        setNFTMetadata([]); 
 
         // reset layout
         runIfFunction(handleSearch, "");
@@ -179,11 +244,37 @@ const Nfts = ({ handleSearch }: NftsProps) => {
             runIfFunction(handleSearch, address);
             
             let volumeSql = WALLET_NFT_VOLUME_QUERY.replace(/{{address}}/g, address);
-            console.log(volumeSql);
-            let volumeData = await query<VolumeData>(volumeSql);
+            let txSql = WALLET_NFT_TXS_QUERY.replace(/{{address}}/g, address);
+            let [volumeData, txData] = await Promise.all([
+              query<VolumeData>(volumeSql),
+              query<TxData>(txSql),
+            ]);
 
             if(volumeData) {
               setVolumeData(volumeData);
+            }
+
+            if(txData) {
+              setTxData(txData);
+
+              let mints: string[] = [];
+              txData.forEach(tx => {
+                if(mints.length > 99) {
+                  return;
+                }
+
+                if(!mints.includes(tx.mint)) {
+                  mints.push(tx.mint);
+                }
+              });
+
+              console.log(mints);
+
+              let { data } = await axios.post<any, AxiosResponse<NftMetadata[]>>('https://api.helius.xyz/v0/tokens/metadata?api-key=c70d5ca6-cb12-4a4f-a827-ee646212f344', {
+                mintAccounts: mints,
+              });
+
+              setNFTMetadata(data);
             }
 
             setIsFSQuerying(false);
@@ -303,6 +394,66 @@ const Nfts = ({ handleSearch }: NftsProps) => {
                   />
                 </div>
               </div>
+            <div className="table-container">
+              <div className="flex justify-between text-xl">
+                <strong>Transactions</strong>
+                <CSVLink className="btn btn-lg btn-info mt-2 max-width-button" data={csvData} filename={'nfts.csv'} target="_blank">Download</CSVLink>
+              </div>
+              <div className='table'>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Token</th>
+                      <th>Date</th>
+                      <th>Tx ID</th>
+                      <th>Type</th>
+                      <th>Currency</th>
+                      <th>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                      {
+                        filteredTxs.length > 0 &&
+                        filteredTxs.map((x, index) => (
+                          <tr key={x.tx_id + index.toString()} className='h-[90px]'>
+                            <td className='text-center'>
+                              <a href={`https://solana.fm/address/${x.mint}`} target="_blank" rel="noopener noreferrer">
+                                {
+                                  nftMetadata.filter(d => d.mint === x.mint).length > 0 && nftMetadata.filter(d => d.mint === x.mint)[0].offChainData?.image?
+                                  <div className="flex flex-col p-5">
+                                    <img src={ nftMetadata.filter(d => d.mint === x.mint)[0].offChainData.image } alt="nft" />
+                                    <strong>{ nftMetadata.filter(d => d.mint === x.mint)[0].offChainData.name }</strong>
+                                  </div> :
+                                  ellipsizeThis(x.mint, 4, 4)
+                                }
+                              </a>
+                            </td>
+                            <td className='text-center'>{moment(x.block_timestamp).format('YYYY-MM-DD HH:mm:ss')}</td>
+                            <td className='text-center'><a href={`https://solana.fm/tx/${x.tx_id}`} target="_blank" rel="noopener noreferrer">{ellipsizeThis(x.tx_id, 4, 4)}</a></td>
+                            <td className='text-center'>{x.obtained_by}</td>
+                            <td className='text-center'>{x.currency}</td>
+                            <td className='text-center'>
+                              <div className="flex flex-col">
+                                <strong>{toShortNumber(x.amount_currency, 2)}</strong>
+                                <strong>(${toShortNumber(x.amount_usd, 2)})</strong>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      }
+                  </tbody>
+                </table>
+              </div>
+              <div className='flex w-[100px] justify-between ml-5 mt-3'>
+                <button onClick={onLeftClick}>
+                  <i className="fa fa-chevron-left"></i>
+                </button>
+                <span>{txPage + 1} / {Math.floor(txData.length / NFT_DATA_PER_PAGE) + 1}</span>
+                <button onClick={onRightClick}>
+                  <i className="fa fa-chevron-right"></i>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
     );
