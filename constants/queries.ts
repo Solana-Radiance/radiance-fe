@@ -283,24 +283,45 @@ export const WALLET_NFT_VOLUME_QUERY = `with buy_volume as (
     from solana.core.fact_nft_sales 
     where succeeded and seller = '{{address}}'
     group by 1
+  ),
+  
+  sol_prices as (
+    select 
+      date(block_timestamp) as date,
+      replace(feed_name, ' / USD') as symbol,
+      median(coalesce(latest_answer_adj, latest_answer_unadj / pow(10,8))) as price --using median cause there will be some nulls / zeroes
+    from ethereum.chainlink.ez_oracle_feeds
+    where feed_category = 'Cryptocurrency (USD pairs)'
+      and feed_name in ('SOL / USD')
+    group by 1,2
+    order by 1
   )
   
     select 
         *,
-        sum(total_sol_profit) over (order by date) as cumulative_sol_profit
+        sum(total_tx) over (order by date) as cumulative_tx,
+        sum(total_volume_sol) over (order by date) as cumulative_volume_sol,
+        sum(total_volume_usd) over (order by date) as cumulative_volume_usd,
+        sum(total_profit_sol) over (order by date) as cumulative_profit_sol,
+        sum(total_profit_usd) over (order by date) as cumulative_profit_usd
     from (
       select
-          date,
-          sum(total_volume) as total_volume,
+          agg.date,
+          sum(total_volume) as total_volume_sol,
+          total_volume_sol * nvl(p.price, 0) as total_volume_usd,
           sum(total_tx) as total_tx,
-            sum(case when type = 'buy' then -total_volume else total_volume end) as total_sol_profit -- excluding value of inventory
+          sum(case when type = 'buy' then -total_volume else total_volume end) as total_profit_sol, -- excluding value of inventory
+          total_profit_sol * nvl(p.price, 0) as total_profit_usd
       from (
         select * from buy_volume
         union
         select * from sell_volume
-      )
-      group by 1
+      ) agg
+      left join sol_prices p
+      on p.date = agg.date
+      group by agg.date, p.price
     )
+    group by 1,2,3,4,5,6
     order by date`;
 
 export const WALLET_DEFI_VOLUME_QUERY = `with 
@@ -317,6 +338,7 @@ group by 1, 2, 3
   
   select 
   	*,
+  	sum(total_tx) over (order by date) as cumulative_tx,
   	sum(total_volume) over (order by date) as cumulative_volume,
   	sum(total_profit) over (order by date) as cumulative_profit
   from (

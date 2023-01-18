@@ -10,12 +10,24 @@ const Stakes = ({ handleSearch }: StakesProps) => {
     const router = useRouter()
     const { defaultAddress } = router.query;
 
+    console.log(defaultAddress);
+
     const [address, setAddress] = useState("");
     const [isValidAddress, setIsValidAddress] = useState(true);
     const [isSearching, setIsSearching] = useState(false);
     const [isFSQuerying, setIsFSQuering] = useState(false);
     const lastQueriedAddress = useRef("");
     const {connection} = useConnection();
+    
+
+    useEffect(() => {
+        if(typeof defaultAddress !== "string") {
+          return;
+        }
+  
+        setAddress(defaultAddress ?? "");
+        handleSearch(defaultAddress ?? "");
+      }, [defaultAddress]);
 
     const onAddressInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       let address = e.target.value;
@@ -24,58 +36,49 @@ const Stakes = ({ handleSearch }: StakesProps) => {
       setIsValidAddress(isValidAddress);
       setAddress(address);
     }, []);
-
-    useEffect(() => {
-      if(typeof defaultAddress !== "string") {
-        return;
-      }
-
-      setAddress(defaultAddress ?? "");
-      handleSearch(defaultAddress ?? "");
-    }, [defaultAddress]);
     
 
-    useEffect(() => {
-        // dont search twice
-        if(lastQueriedAddress.current === address && !isSearching) {
-        runIfFunction(handleSearch, address);
-        }
+  useEffect(() => {
+    // dont search twice
+    if(lastQueriedAddress.current === address && !isSearching) {
+      runIfFunction(handleSearch, address);
+    }
 
-        if(isSearching || lastQueriedAddress.current === address) {
-        return;
-        }
+    if(isSearching || lastQueriedAddress.current === address) {
+      return;
+    }
 
-        if(address.length === 0) {
-        runIfFunction(handleSearch, address);
-        return;
-        }
+    if(address.length === 0) {
+      runIfFunction(handleSearch, address);
+      return;
+    }
 
-        if(address.length !== ADDRESS_LENGTH) {
-        return;
-        }
-        
-        setIsSearching(true);
+    if(address.length !== ADDRESS_LENGTH) {
+      return;
+    }
+    
+    setIsSearching(true);
 
-        // reset layout
-        runIfFunction(handleSearch, "");
-        lastQueriedAddress.current = address;
+    // reset layout
+    runIfFunction(handleSearch, "");
+    lastQueriedAddress.current = address;
 
-        //search everything
-        const search = async() => {
-        //reset
+    //search everything
+    const search = async() => {
+      //reset
 
-        // first search finished, update layout
-        setIsSearching(false);
-        runIfFunction(handleSearch, address);
-        
+      // first search finished, update layout
+      setIsSearching(false);
+      runIfFunction(handleSearch, address);
+      
 
-        setIsFSQuering(false);
+      setIsFSQuering(false);
 
-        // may need to cache the data
-        }
-        
-        search();
-    }, [address, isSearching]);
+      // may need to cache the data
+    }
+    
+    search();
+  }, [address, isSearching]);
 
     return (
         <div className='stakes-page'>

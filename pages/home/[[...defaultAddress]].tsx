@@ -228,7 +228,6 @@ const Home = ({ handleSearch }: HomeProps) => {
     }
 
     if(address.length === 0) {
-      console.log('hanlding search 2: ' + address)
       runIfFunction(handleSearch, address);
       return;
     }
@@ -241,7 +240,6 @@ const Home = ({ handleSearch }: HomeProps) => {
 
     // only reset layout if it's not searched
     if(!defaultAddress) {
-      console.log('hanlding search 3: ' + "")
       runIfFunction(handleSearch, "");
     }
     lastQueriedAddress.current = address;
@@ -316,7 +314,6 @@ const Home = ({ handleSearch }: HomeProps) => {
 
       // first search finished, update layout
       setIsSearching(false);
-      console.log('hanlding search 4: ' + address)
       runIfFunction(handleSearch, address);
 
       // fs starts querying

@@ -35,4 +35,22 @@
             }
         }
     }
+
+    > div.profile {
+        max-width: 1080px;
+        width: 100%;
+        margin-top: 10vh;
+        flex-direction: column;
+    }
+
+    .graph-container {
+        margin-top: 20vh;
+        width: 100%;
+
+        > .graph {
+            min-height: 40vh;
+            margin-top: 5px;
+            width: 100%;
+        }
+    }
 }
