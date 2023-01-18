@@ -1,13 +1,14 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import { useRouter } from 'next/router';
-import { ADDRESS_LENGTH } from '../../constants/numbers';
-import { StakeData, StakesProps } from './types';
+import { ADDRESS_LENGTH, DATA_PER_PAGE } from '../../constants/numbers';
+import { StakeData, StakesProps, TxData } from './types';
 import { GetProgramAccountsFilter, PublicKey } from '@solana/web3.js';
-import { runIfFunction, toLocaleDecimal } from '../../utils/common';
-import { useConnection } from '@solana/wallet-adapter-react';import { WALLET_STAKE_SUMMARIES_QUERY } from '../../constants/queries';
+import { ellipsizeThis, runIfFunction, toLocaleDecimal, toShortNumber } from '../../utils/common';
+import { useConnection } from '@solana/wallet-adapter-react';import { WALLET_STAKE_SUMMARIES_QUERY, WALLET_STAKE_TXS_QUERY } from '../../constants/queries';
 import { query } from '../../utils/flipside';
 import { MultiBarGraph } from '../../components/MultiBarGraph';
-;
+import { CSVLink } from 'react-csv';
+import moment from 'moment';
 
 const STAKE_PROGRAM_PK = new PublicKey('Stake11111111111111111111111111111111111111');
 const WALLET_OFFSET = 44;
@@ -26,8 +27,64 @@ const Stakes = ({ handleSearch }: StakesProps) => {
 
     const [stakeData, setStakeData] = useState<StakeData[]>([]);
     const [stakedSols, setStakedSols] = useState(0);
+    const [txData, setTxData] = useState<TxData[]>([]);
+    const [txPage, setTxPage] = useState(0);
 
-    
+    const filteredTxs = useMemo(() => {
+      let newData = [];
+      for(var i = txPage * DATA_PER_PAGE; i < (txPage + 1) * DATA_PER_PAGE; i++) {
+        if(i === txData.length) {
+          //end of data
+          break;
+        }
+        newData.push(txData[i]);
+      }
+      return newData;
+    }, [txData, txPage]);
+
+    const csvData = useMemo(() => {
+      let newData = [
+        [
+          'block_timestamp',
+          'tx_id',
+          'index',
+          'event_type',
+          'stake_account',
+          'pre_tx_staked_balance_adj',
+          'post_tx_staked_balance_adj',
+          'net_deposit_amount',
+        ]
+      ];
+      txData.forEach(x => {
+        newData.push([
+          x.block_timestamp,
+          x.tx_id,
+          x.index.toString(),
+          x.event_type,
+          x.stake_account,
+          x.pre_tx_staked_balance_adj.toString(),
+          x.post_tx_staked_balance_adj.toString(),
+          x.net_deposit_amount.toString(),
+        ]);
+      });
+      return newData;
+    }, [txData]);
+
+    const onLeftClick = useCallback(() => {
+      let newPage = txPage - 1;
+      if(newPage >= 0) {
+        setTxPage(newPage);
+      }
+    }, [txPage]);
+
+    const onRightClick = useCallback(() => {
+      let newPage = txPage + 1;
+      let maxPage = Math.floor(txData.length / DATA_PER_PAGE);
+      if(newPage <= maxPage) {
+        setTxPage(newPage);
+      }
+    }, [txPage, txData]);
+
     const stakeInterest = useMemo(() => {
       if(!stakeData || stakeData.length === 0) {
         return 0;
@@ -131,9 +188,18 @@ const Stakes = ({ handleSearch }: StakesProps) => {
       setIsFSQuerying(true);
 
       let stakeSql = WALLET_STAKE_SUMMARIES_QUERY.replace(/{{address}}/g, address);
-      let stakeData = await query<StakeData>(stakeSql);
+      let txSql = WALLET_STAKE_TXS_QUERY.replace(/{{address}}/g, address);
+      let [stakeData, txData] = await Promise.all([
+        query<StakeData>(stakeSql),
+        query<TxData>(txSql),
+      ]);
+
       if(stakeData && stakeData.length > 0) {
         setStakeData(stakeData);
+      }
+
+      if(txData && txData.length > 0) {
+        setTxData(txData);
       }
 
       runIfFunction(handleSearch, address);
@@ -173,6 +239,58 @@ const Stakes = ({ handleSearch }: StakesProps) => {
                 />
               </div>
             </div>
+              <div className="table-container">
+                <div className="flex justify-between text-xl">
+                  <strong>Transactions</strong>
+                  <CSVLink className="btn btn-lg btn-info mt-2 max-width-button" data={csvData} filename={'stakes.csv'} target="_blank">Download</CSVLink>
+                </div>
+                <div className='table'>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Tx ID</th>
+                        <th>Type</th>
+                        <th>Details</th>
+                        <th>Net</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                        {
+                          filteredTxs.length > 0 &&
+                          filteredTxs.map(x => (
+                            <tr key={x.tx_id} className='h-[90px]'>
+                              <td className='text-center'>{moment(x.block_timestamp).format('YYYY-MM-DD HH:mm:ss')}</td>
+                              <td className='text-center'><a href={`https://solana.fm/tx/${x.tx_id}`} target="_blank" rel="noopener noreferrer">{ellipsizeThis(x.tx_id, 4, 4)}</a></td>
+                              <td className='text-center'><strong className={`${x.net_deposit_amount < 0? 'text-red-300' : 'text-green-300'}`}>{x.event_type}</strong></td>
+                              <td className='text-center'>
+                                <div className='flex items-center justify-center'>
+                                  <div className='flex flex-col w-[200px]'>
+                                    <span>{toShortNumber(x.pre_tx_staked_balance_adj, 2)} <strong>SOL</strong></span>
+                                  </div>
+                                  <span>➜</span>
+                                  <div className='flex flex-col w-[200px]'>
+                                    <span>{toShortNumber(x.post_tx_staked_balance_adj, 2)} <strong>SOL</strong></span>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className='text-center'><strong className={`${x.net_deposit_amount < 0? 'text-red-300' : 'text-green-300'}`}>{toLocaleDecimal(x.net_deposit_amount, 2, 2)}</strong></td>
+                            </tr>
+                          ))
+                        }
+                    </tbody>
+                  </table>
+                </div>
+                <div className='flex w-[100px] justify-between ml-5 mt-3'>
+                  <button onClick={onLeftClick}>
+                    <i className="fa fa-chevron-left"></i>
+                  </button>
+                  <span>{txPage + 1} / {Math.floor(txData.length / DATA_PER_PAGE) + 1}</span>
+                  <button onClick={onRightClick}>
+                    <i className="fa fa-chevron-right"></i>
+                  </button>
+                </div>
+              </div>
           </div>
         </div>
     );

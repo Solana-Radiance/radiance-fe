@@ -469,3 +469,53 @@ group by 1, 2, 3
     where t.tx_to in ('{{address}}') and t.mint in ('{{mints}}')
     qualify t.block_timestamp = last_value(t.block_timestamp) over (partition by t.mint order by t.block_timestamp) -- latest transfer only
 `;
+
+export const WALLET_DEFI_TXS_QUERY = `with 
+prices as (
+select 
+  date(recorded_hour) as date,
+  token_address,
+  symbol,
+  avg(close) as price
+from solana.core.ez_token_prices_hourly p
+group by 1, 2, 3
+)
+
+  
+    select 
+  		s.block_timestamp,
+  		s.tx_id,
+  		coalesce(upper(p.symbol), swap_from_mint) as symbol_from,
+  		coalesce(upper(p2.symbol), swap_to_mint) as symbol_to,
+  		swap_from_amount,
+  		swap_from_amount * coalesce(p.price, 0) as swap_from_amount_usd,
+  		swap_to_amount,
+  		swap_to_amount * coalesce(p2.price, 0) as swap_to_amount_usd,
+  		swap_to_amount_usd - swap_from_amount_usd as profit_usd
+    from solana.core.fact_swaps s
+    left join prices p
+    on p.token_address = s.swap_from_mint and p.date = s.block_timestamp::date
+    left join prices p2
+    on p2.token_address = s.swap_to_mint and p2.date = s.block_timestamp::date
+    where succeeded and swapper = '{{address}}'
+    order by s.block_timestamp desc`;
+
+  export const WALLET_STAKE_TXS_QUERY = `with stake_accounts as (
+    select distinct stake_account
+    from solana.core.ez_staking_lp_actions
+    where stake_authority = '{{address}}'
+  )
+    select
+        block_timestamp,
+        tx_id,
+        index,
+        event_type,
+        stake_account,
+        pre_tx_staked_balance / 1e9 as pre_tx_staked_balance_adj,
+        post_tx_staked_balance / 1e9 as post_tx_staked_balance_adj,
+        post_tx_staked_balance_adj - pre_tx_staked_balance_adj as net_deposit_amount
+    from solana.core.ez_staking_lp_actions
+    where stake_account in (select stake_account from stake_accounts)
+      and succeeded 
+      and event_type in ('delegate', 'withdraw', 'merge_source', 'merge_destination')
+  order by 1 desc`;
