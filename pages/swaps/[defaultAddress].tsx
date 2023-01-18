@@ -16,7 +16,7 @@ const Swaps = ({ handleSearch }: SwapsProps) => {
     const [address, setAddress] = useState("");
     const [isValidAddress, setIsValidAddress] = useState(true);
     const [isSearching, setIsSearching] = useState(false);
-    const [isFSQuerying, setIsFSQuering] = useState(false);
+    const [isFSQuerying, setIsFSQuerying] = useState(false);
     const lastQueriedAddress = useRef("");
     const {connection} = useConnection();
 
@@ -42,7 +42,7 @@ const Swaps = ({ handleSearch }: SwapsProps) => {
 
     // graph data
     const volumeGraphData = useMemo(() => {
-      if(!volumeData) {
+      if(!volumeData || volumeData.length === 0) {
         return {};
       }
   
@@ -52,7 +52,7 @@ const Swaps = ({ handleSearch }: SwapsProps) => {
     }, [volumeData]);
 
     const cumulativeVolumeGraphData = useMemo(() => {
-      if(!volumeData) {
+      if(!volumeData || volumeData.length === 0) {
         return {};
       }
   
@@ -62,7 +62,7 @@ const Swaps = ({ handleSearch }: SwapsProps) => {
     }, [volumeData]);
 
     const profitGraphData = useMemo(() => {
-      if(!volumeData) {
+      if(!volumeData || volumeData.length === 0) {
         return {};
       }
   
@@ -72,7 +72,7 @@ const Swaps = ({ handleSearch }: SwapsProps) => {
     }, [volumeData]);
 
     const cumulativeProfitGraphData = useMemo(() => {
-      if(!volumeData) {
+      if(!volumeData || volumeData.length === 0) {
         return {};
       }
   
@@ -82,7 +82,7 @@ const Swaps = ({ handleSearch }: SwapsProps) => {
     }, [volumeData]);
 
     const txGraphData = useMemo(() => {
-      if(!volumeData) {
+      if(!volumeData || volumeData.length === 0) {
         return {};
       }
   
@@ -92,7 +92,7 @@ const Swaps = ({ handleSearch }: SwapsProps) => {
     }, [volumeData]);
 
     const cumulativeTxGraphData = useMemo(() => {
-      if(!volumeData) {
+      if(!volumeData || volumeData.length === 0) {
         return {};
       }
   
@@ -121,6 +121,8 @@ const Swaps = ({ handleSearch }: SwapsProps) => {
       }
       
       setIsSearching(true);
+      //reset
+      setVolumeData([]);
 
       // reset layout
       runIfFunction(handleSearch, "");
@@ -128,10 +130,10 @@ const Swaps = ({ handleSearch }: SwapsProps) => {
 
       //search everything
       const search = async() => {
-        //reset
 
         // first search finished, update layout
         setIsSearching(false);
+        setIsFSQuerying(true);
         runIfFunction(handleSearch, address);
         
         let volumeSql = WALLET_DEFI_VOLUME_QUERY.replace(/{{address}}/g, address);
@@ -141,7 +143,7 @@ const Swaps = ({ handleSearch }: SwapsProps) => {
           setVolumeData(volumeData);
         }
 
-        setIsFSQuering(false);
+        setIsFSQuerying(false);
 
         // may need to cache the data
       }

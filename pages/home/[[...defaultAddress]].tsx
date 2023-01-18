@@ -29,7 +29,7 @@ const Home = ({ handleSearch }: HomeProps) => {
 
   const [isValidAddress, setIsValidAddress] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
-  const [isFSQuerying, setIsFSQuering] = useState(false);
+  const [isFSQuerying, setIsFSQuerying] = useState(false);
   const lastQueriedAddress = useRef("");
   const {connection} = useConnection();
   const solanaWallet = useWallet();
@@ -237,6 +237,14 @@ const Home = ({ handleSearch }: HomeProps) => {
     }
     
     setIsSearching(true);
+    //reset
+    setData([]);
+    setNFtRankData([]);
+    setVolumeRankData([]);
+    setNames([]);
+    setNFTs([]);
+    setActiveNFT(undefined);
+    setTokenBalances({});
 
     // only reset layout if it's not searched
     if(!defaultAddress) {
@@ -283,14 +291,6 @@ const Home = ({ handleSearch }: HomeProps) => {
 
     //search everything
     const search = async() => {
-      //reset
-      setData([]);
-      setNFtRankData([]);
-      setVolumeRankData([]);
-      setNames([]);
-      setNFTs([]);
-      setActiveNFT(undefined);
-      setTokenBalances({});
 
       // solana has different accounts for every token for a given address
       let accountsRet = await getTokenAccounts();
@@ -317,7 +317,7 @@ const Home = ({ handleSearch }: HomeProps) => {
       runIfFunction(handleSearch, address);
 
       // fs starts querying
-      setIsFSQuering(true);
+      setIsFSQuerying(true);
 
       let balanceSql = WALLET_BALANCE_QUERY.replace(/{{address}}/g, accounts.join("','"));
       balanceSql = balanceSql.replace(/{{main_address}}/g, address);
@@ -380,7 +380,7 @@ const Home = ({ handleSearch }: HomeProps) => {
       //console.log(volumeRankData);
       //console.log(nftRankData);
 
-      setIsFSQuering(false);
+      setIsFSQuerying(false);
 
       // may need to cache the data
     }

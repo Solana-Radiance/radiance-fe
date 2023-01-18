@@ -16,7 +16,7 @@ const Nfts = ({ handleSearch }: NftsProps) => {
     const [address, setAddress] = useState("");
     const [isValidAddress, setIsValidAddress] = useState(true);
     const [isSearching, setIsSearching] = useState(false);
-    const [isFSQuerying, setIsFSQuering] = useState(false);
+    const [isFSQuerying, setIsFSQuerying] = useState(false);
     const lastQueriedAddress = useRef("");
     const {connection} = useConnection();
 
@@ -32,7 +32,7 @@ const Nfts = ({ handleSearch }: NftsProps) => {
 
     // graph data
     const volumeGraphData = useMemo(() => {
-      if(!volumeData) {
+      if(!volumeData || volumeData.length === 0) {
         return {};
       }
   
@@ -42,7 +42,7 @@ const Nfts = ({ handleSearch }: NftsProps) => {
     }, [volumeData]);
 
     const cumulativeVolumeGraphData = useMemo(() => {
-      if(!volumeData) {
+      if(!volumeData || volumeData.length === 0) {
         return {};
       }
   
@@ -52,7 +52,7 @@ const Nfts = ({ handleSearch }: NftsProps) => {
     }, [volumeData]);
 
     const volumeUsdGraphData = useMemo(() => {
-      if(!volumeData) {
+      if(!volumeData || volumeData.length === 0) {
         return {};
       }
   
@@ -62,7 +62,7 @@ const Nfts = ({ handleSearch }: NftsProps) => {
     }, [volumeData]);
 
     const cumulativeUsdVolumeGraphData = useMemo(() => {
-      if(!volumeData) {
+      if(!volumeData || volumeData.length === 0) {
         return {};
       }
   
@@ -72,7 +72,7 @@ const Nfts = ({ handleSearch }: NftsProps) => {
     }, [volumeData]);
 
     const profitGraphData = useMemo(() => {
-      if(!volumeData) {
+      if(!volumeData || volumeData.length === 0) {
         return {};
       }
   
@@ -82,7 +82,7 @@ const Nfts = ({ handleSearch }: NftsProps) => {
     }, [volumeData]);
 
     const cumulativeProfitGraphData = useMemo(() => {
-      if(!volumeData) {
+      if(!volumeData || volumeData.length === 0) {
         return {};
       }
   
@@ -92,7 +92,7 @@ const Nfts = ({ handleSearch }: NftsProps) => {
     }, [volumeData]);
 
     const profitUsdGraphData = useMemo(() => {
-      if(!volumeData) {
+      if(!volumeData || volumeData.length === 0) {
         return {};
       }
   
@@ -102,7 +102,7 @@ const Nfts = ({ handleSearch }: NftsProps) => {
     }, [volumeData]);
 
     const cumulativeProfitUsdGraphData = useMemo(() => {
-      if(!volumeData) {
+      if(!volumeData || volumeData.length === 0) {
         return {};
       }
   
@@ -112,7 +112,7 @@ const Nfts = ({ handleSearch }: NftsProps) => {
     }, [volumeData]);
 
     const txGraphData = useMemo(() => {
-      if(!volumeData) {
+      if(!volumeData || volumeData.length === 0) {
         return {};
       }
   
@@ -122,7 +122,7 @@ const Nfts = ({ handleSearch }: NftsProps) => {
     }, [volumeData]);
 
     const cumulativeTxGraphData = useMemo(() => {
-      if(!volumeData) {
+      if(!volumeData || volumeData.length === 0) {
         return {};
       }
   
@@ -163,6 +163,8 @@ const Nfts = ({ handleSearch }: NftsProps) => {
         }
         
         setIsSearching(true);
+        //reset
+        setVolumeData([]);
 
         // reset layout
         runIfFunction(handleSearch, "");
@@ -170,10 +172,10 @@ const Nfts = ({ handleSearch }: NftsProps) => {
 
         //search everything
         const search = async() => {
-            //reset
 
             // first search finished, update layout
             setIsSearching(false);
+            setIsFSQuerying(true);
             runIfFunction(handleSearch, address);
             
             let volumeSql = WALLET_NFT_VOLUME_QUERY.replace(/{{address}}/g, address);
@@ -184,7 +186,7 @@ const Nfts = ({ handleSearch }: NftsProps) => {
               setVolumeData(volumeData);
             }
 
-            setIsFSQuering(false);
+            setIsFSQuerying(false);
 
             // may need to cache the data
         }
