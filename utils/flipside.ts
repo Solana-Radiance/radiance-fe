@@ -1,5 +1,5 @@
 // need to use js cause no typing
-import { Flipside } from "@flipsidecrypto/sdk";
+import { Flipside } from "../sdk/dist/index.js";
 import { sleep } from "./common";
 
 // Initialize `Flipside` with your API key

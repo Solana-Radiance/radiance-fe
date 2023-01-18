@@ -35,6 +35,8 @@ import {
 } from '../utils/wallet';
 import { CivicIdentityResolver } from '@dialectlabs/identity-civic';
 import { NextComponentType, NextPageContext } from 'next';
+import { LayoutProps } from './_app-type';
+import { ADDRESS_LENGTH } from '../constants/numbers';
 
 
 
@@ -64,15 +66,15 @@ export const themeVariables: IncomingThemeVariables = {
   },
 };
 
-function PageLayout({ Component, pageProps }: {Component: NextComponentType<NextPageContext, any, any>, pageProps: any}) {
+function PageLayout({ Component, pageProps }: LayoutProps) {
   const { connection: solanaConnection } = useSolanaConnection();
+  const [address, setAddress] = useState("");
   const solanaWallet = useSolanaWallet();
 
   const [dialectSolanaWalletAdapter, setDialectSolanaWalletAdapter] =
     useState<DialectSolanaWalletAdapter | null>(null);
 
   useEffect(() => {
-    console.log('wallet changed')
     setDialectSolanaWalletAdapter(solanaWalletToDialectWallet(solanaWallet));
   }, [solanaWallet]);
 
@@ -120,10 +122,14 @@ function PageLayout({ Component, pageProps }: {Component: NextComponentType<Next
           <div>
             {/* Headers */}
             <header>
-              <span>Logo</span>
+              <span className={`logo ${address.length === ADDRESS_LENGTH? 'active' : ''}`}>Logo</span>
               <SolanaWalletButton />
             </header>
-            <Component {...pageProps} />
+            <div className={`sidebar ${address.length === ADDRESS_LENGTH? 'active' : ''}`}></div>
+            <Component 
+              {...pageProps} 
+              handleSearch={(address: string) => setAddress(address)} // Home
+            />
             <BottomChat dialectId="dialect-bottom-chat" />
             {/* Footers */}
             {/* <footer>this is a footer</footer> */}
@@ -136,7 +142,6 @@ function PageLayout({ Component, pageProps }: {Component: NextComponentType<Next
 
 // layout
 function MyApp({ Component, pageProps }: AppProps) {
-
   return (
     <>
       <Head>
@@ -161,7 +166,10 @@ function MyApp({ Component, pageProps }: AppProps) {
       </Head>
       {/* Contexts */}
       <SolanaWalletContext>
-        <PageLayout Component={Component} pageProps={pageProps}/>
+        <PageLayout 
+          Component={Component} 
+          pageProps={pageProps}
+        />
       </SolanaWalletContext>
     </>
   );

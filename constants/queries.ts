@@ -1,4 +1,5 @@
-// params {{address}}
+// params {{address}} as token accounts
+// {{main_address}} as main
 export const WALLET_BALANCE_QUERY = `with
 prices as (
 select 
@@ -10,6 +11,18 @@ from solana.core.ez_token_prices_hourly p
 group by 1, 2, 3
 ),
 
+sol_prices as (
+    select 
+      date(block_timestamp) as date,
+      replace(feed_name, ' / USD') as symbol,
+      median(coalesce(latest_answer_adj, latest_answer_unadj / pow(10,8))) as price --using median cause there will be some nulls / zeroes
+    from ethereum.chainlink.ez_oracle_feeds
+    where feed_category = 'Cryptocurrency (USD pairs)'
+      and feed_name in ('SOL / USD')
+    group by 1,2
+    order by 1
+),
+
 net_ins as (
     select
       date(block_timestamp) as date,
@@ -17,18 +30,63 @@ net_ins as (
       sum(
   		(
   			case
-  			when tx_from = '{{address}}' then -amount 
+  			when tx_from in ('{{address}}') and tx_to in ('{{address}}') then 0
+  			when tx_from in ('{{address}}') then -amount 
   			else amount end
   		)
   	) as net_in
 	from solana.core.fact_transfers b
-    where  (tx_from = '{{address}}' or tx_to = '{{address}}')
+    where  (tx_from in ('{{address}}') or tx_to in ('{{address}}'))
     group by 1,2
 ),
 
 cumulative_min_date as (
   SELECT mint, MIN(date) as min_date
   FROM net_ins
+  GROUP BY mint
+),
+
+close_accounts as (
+select distinct tx_id
+from solana.core.fact_events
+where contains(signers::string, '{{main_address}}')
+  and succeeded
+  and event_type = 'closeAccount'
+),
+
+sol_close_account_ins as (
+select 
+  block_timestamp::date as date,
+  'So11111111111111111111111111111111111111112' as mint,
+  sum(case 
+  when signers[0] = '{{main_address}}' then post_balances[0] - pre_balances[0]
+  when signers[1] = '{{main_address}}' then post_balances[1] - pre_balances[1]
+  when signers[2] = '{{main_address}}' then post_balances[2] - pre_balances[2]
+  when signers[3] = '{{main_address}}' then post_balances[3] - pre_balances[3]
+  when signers[4] = '{{main_address}}' then post_balances[4] - pre_balances[4]
+  when signers[5] = '{{main_address}}' then post_balances[5] - pre_balances[5]
+  when signers[6] = '{{main_address}}' then post_balances[6] - pre_balances[6]
+  when signers[7] = '{{main_address}}' then post_balances[7] - pre_balances[7]
+  when signers[8] = '{{main_address}}' then post_balances[8] - pre_balances[8]
+  when signers[9] = '{{main_address}}' then post_balances[9] - pre_balances[9]
+  else 0 end) / 1e9 as net_in
+from solana.core.fact_transactions t
+where exists (select 1 from close_accounts c where c.tx_id = t.tx_id)
+group by 1
+),
+
+agg_net_ins as (
+  select 
+  	coalesce(n.date, c.date) as date,
+  	coalesce(n.mint, c.mint) as mint,
+  	coalesce(n.net_in, 0) + coalesce(c.net_in, 0) as net_in
+  from net_ins n
+  full outer join sol_close_account_ins c
+  on n.date = c.date and n.mint = c.mint
+),
+cumulative_min_date as (
+  SELECT mint, MIN(date) as min_date
+  FROM agg_net_ins
   GROUP BY mint
 ),
   
@@ -52,23 +110,25 @@ select
   d.mint,
   sum(coalesce(net_in, 0)) over (partition by d.mint order by d.date) as balance
 from dates d
-left join net_ins b
+left join agg_net_ins b
 on d.date = b.date and d.mint = b.mint
 group by d.date, d.mint, net_in
-qualify balance > 0
 )
-
 
 select
 	b.date,
-  	b.mint,
-  	p.price,
-  	upper(p.symbol) as symbol,
-  	b.balance,
-	b.balance *  nvl(p.price, 0) as balance_usd
+  	--b.mint,
+  	--p.price,
+  	--upper(p.symbol) as symbol,
+  	--b.balance,
+	sum(b.balance *  nvl(p.price, 0)) as balance_usd,
+  	balance_usd / p2.price as balance_in_sol
 from token_balances b
 left join prices p
 on p.date = b.date and p.token_address = b.mint
+left join sol_prices p2
+on p2.date = b.date
+group by 1, p2.price
 order by 1, balance_usd desc`;
 
 export const WALLET_NFT_RANKING_QUERY = `with buy_volume as (
@@ -120,18 +180,20 @@ export const WALLET_NFT_RANKING_QUERY = `with buy_volume as (
         total_tx,
           address_count,
         rank() over (order by total_volume desc) as rank_by_volume,
+          rank_by_volume / address_count as rank_by_volume_pct,
           case
-          when rank_by_volume / address_count <= 0.01 then 'Top 1%'
-          when rank_by_volume / address_count <= 0.05 then 'Top 5%'
-          when rank_by_volume / address_count <= 0.1 then 'Top 10%'
-          when rank_by_volume / address_count <= 0.5 then 'Top 50%'
+          when rank_by_volume_pct <= 0.01 then 'Top 1%'
+          when rank_by_volume_pct <= 0.05 then 'Top 5%'
+          when rank_by_volume_pct <= 0.1 then 'Top 10%'
+          when rank_by_volume_pct <= 0.5 then 'Top 50%'
           else 'Bottom 50%' end as tier_by_volume,
         rank() over (order by total_tx desc) as rank_by_tx_count,
+          rank_by_tx_count / address_count as rank_by_tx_count_pct,
           case
-          when rank_by_tx_count / address_count <= 0.01 then 'Top 1%'
-          when rank_by_tx_count / address_count <= 0.05 then 'Top 5%'
-          when rank_by_tx_count / address_count <= 0.1 then 'Top 10%'
-          when rank_by_tx_count / address_count <= 0.5 then 'Top 50%'
+          when rank_by_tx_count_pct <= 0.01 then 'Top 1%'
+          when rank_by_tx_count_pct <= 0.05 then 'Top 5%'
+          when rank_by_tx_count_pct <= 0.1 then 'Top 10%'
+          when rank_by_tx_count_pct <= 0.5 then 'Top 50%'
           else 'Bottom 50%' end as tier_by_tx_count
     from address_summaries join address_count
   )
@@ -173,26 +235,28 @@ address_count as (
 ),
 
 ranks as (
-  select
-      address,
-      total_volume,
-      total_tx,
-        address_count,
-      rank() over (order by total_volume desc) as rank_by_volume,
-        case
-        when rank_by_volume / address_count <= 0.01 then 'Top 1%'
-        when rank_by_volume / address_count <= 0.05 then 'Top 5%'
-        when rank_by_volume / address_count <= 0.1 then 'Top 10%'
-        when rank_by_volume / address_count <= 0.5 then 'Top 50%'
-        else 'Bottom 50%' end as tier_by_volume,
-      rank() over (order by total_tx desc) as rank_by_tx_count,
-        case
-        when rank_by_tx_count / address_count <= 0.01 then 'Top 1%'
-        when rank_by_tx_count / address_count <= 0.05 then 'Top 5%'
-        when rank_by_tx_count / address_count <= 0.1 then 'Top 10%'
-        when rank_by_tx_count / address_count <= 0.5 then 'Top 50%'
-        else 'Bottom 50%' end as tier_by_tx_count
-  from address_summaries join address_count
+    select
+        address,
+        total_volume,
+        total_tx,
+          address_count,
+        rank() over (order by total_volume desc) as rank_by_volume,
+        rank_by_volume / address_count as rank_by_volume_pct,
+          case
+          when rank_by_volume_pct <= 0.01 then 'Top 1%'
+          when rank_by_volume_pct <= 0.05 then 'Top 5%'
+          when rank_by_volume_pct <= 0.1 then 'Top 10%'
+          when rank_by_volume_pct <= 0.5 then 'Top 50%'
+          else 'Bottom 50%' end as tier_by_volume,
+        rank() over (order by total_tx desc) as rank_by_tx_count,
+          rank_by_tx_count / address_count as rank_by_tx_count_pct,
+          case
+          when rank_by_tx_count_pct <= 0.01 then 'Top 1%'
+          when rank_by_tx_count_pct <= 0.05 then 'Top 5%'
+          when rank_by_tx_count_pct <= 0.1 then 'Top 10%'
+          when rank_by_tx_count_pct <= 0.5 then 'Top 50%'
+          else 'Bottom 50%' end as tier_by_tx_count
+    from address_summaries join address_count
 )
 
 select *
@@ -306,3 +370,80 @@ group by 1, 2, 3
         sum(stake_balance_diff) over (order by date) as total_stake_balance -- negative means total profit
   from stake_summaries
   order by 1`;
+
+  export const TOKEN_DETAILS_QUERY = `
+  with
+    prices as (
+        select 
+        token_address,
+        symbol,
+        avg(close) as price
+        from solana.core.ez_token_prices_hourly p
+        where recorded_hour >= CURRENT_DATE - 1
+        group by 1, 2
+    )
+
+    select 
+        t.token_address,
+        upper(t.symbol) as symbol,
+        t.logo,
+        p.price
+    from solana.core.dim_tokens t
+    left join prices p
+    on p.token_address = t.token_address
+    where t.token_address in ('{{address}}')
+`;
+
+export const NFT_TX_QUERY = `
+with sol_prices as (
+    select 
+      date(block_timestamp) as date,
+      replace(feed_name, ' / USD') as symbol,
+      median(coalesce(latest_answer_adj, latest_answer_unadj / pow(10,8))) as price --using median cause there will be some nulls / zeroes
+    from ethereum.chainlink.ez_oracle_feeds
+    where feed_category = 'Cryptocurrency (USD pairs)'
+      and feed_name in ('SOL / USD')
+    group by 1,2
+    order by 1
+  ),
+  
+prices as (
+select 
+  date(recorded_hour) as date,
+  token_address,
+  symbol,
+  avg(close) as price
+from solana.core.ez_token_prices_hourly p
+group by 1, 2, 3
+)
+    
+    select 
+      t.block_timestamp,
+      t.tx_id,
+      t.tx_from,
+      t.tx_to,
+      t.mint,
+  	  case 
+  	  when s.sales_amount is not null then 'Bought'
+  	  when m.mint_price is not null then 'Minted'
+  	  else 'Gifted' end as obtained_by,
+  	  coalesce(upper(tk.symbol), m.mint_currency, 'SOL') as currency,
+      coalesce(s.sales_amount, m.mint_price, 0) as amount_currency,
+  	  case 
+  	  when s.sales_amount is not null then amount_currency * coalesce(p.price, 0)
+  	  else amount_currency * coalesce(p2.price, 0) 
+  	  end as amount_usd
+    from solana.core.fact_transfers t
+    left join solana.core.fact_nft_sales s
+    on s.mint = t.mint and s.tx_id = t.tx_id
+    left join solana.core.fact_nft_mints m
+    on s.mint = t.mint and m.tx_id = t.tx_id
+    left join solana.core.dim_tokens tk
+    on m.mint_currency = tk.token_address
+    left join sol_prices p
+    on p.date = t.block_timestamp::date
+    left join prices p2
+    on p2.date = t.block_timestamp::date and p2.token_address = m.mint_currency
+    where t.tx_to in ('{{address}}') and t.mint in ('{{mints}}')
+    qualify t.block_timestamp = last_value(t.block_timestamp) over (partition by t.mint order by t.block_timestamp) -- latest transfer only
+`;
