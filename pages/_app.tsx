@@ -1,5 +1,5 @@
 import 'tailwindcss/tailwind.css';
-import '../styles/globals.css';
+import '../styles/globals.scss';
 import '@dialectlabs/react-ui/index.css';
 import './index.scss';
 
@@ -38,7 +38,8 @@ import { NextComponentType, NextPageContext } from 'next';
 import { LayoutProps } from './_app-type';
 import { ADDRESS_LENGTH } from '../constants/numbers';
 
-
+import logo from '../components/Icon/assets/logo-kida.png';
+import Image from 'next/image';
 
 // TODO: Use useTheme instead of explicitly importing defaultVariables
 export const themeVariables: IncomingThemeVariables = {
@@ -70,6 +71,11 @@ function PageLayout({ Component, pageProps }: LayoutProps) {
   const { connection: solanaConnection } = useSolanaConnection();
   const [address, setAddress] = useState("");
   const solanaWallet = useSolanaWallet();
+  const [currentPath, setCurrentPath] = useState("");
+
+  useEffect(() => {
+    setCurrentPath(window.location.pathname);
+  }, []);
 
   const [dialectSolanaWalletAdapter, setDialectSolanaWalletAdapter] =
     useState<DialectSolanaWalletAdapter | null>(null);
@@ -122,10 +128,30 @@ function PageLayout({ Component, pageProps }: LayoutProps) {
           <div>
             {/* Headers */}
             <header>
-              <span className={`logo ${address.length === ADDRESS_LENGTH? 'active' : ''}`}>Logo</span>
+              <div className={`logo ${address.length === ADDRESS_LENGTH? 'active' : ''}`}>
+                <Image src={logo} alt=""/>
+              </div>
               <SolanaWalletButton />
             </header>
-            <div className={`sidebar ${address.length === ADDRESS_LENGTH? 'active' : ''}`}></div>
+            <div className={`sidebar ${address.length === ADDRESS_LENGTH? 'active' : ''}`}>
+              <div className="logo-container">
+                <div className="logo">
+                  <Image src={logo} alt="" />
+                </div>
+              </div>
+              <a href={`/${address}`} className={currentPath === `/${address}` || currentPath === '/'? "active" : ""}>
+                <div>Home</div>
+              </a>
+              <a href={`/swaps/${address}`} className={currentPath === `/swaps/${address}`? "active" : ""}>
+                <div>Swaps</div>
+              </a>
+              <a href={`/nfts/${address}`} className={currentPath === `/nfts/${address}`? "active" : ""}>
+                <div>NFTs</div>
+              </a>
+              <a href={`/stakes/${address}`} className={currentPath === `/stakes/${address}`? "active" : ""}>
+                <div>Stakes</div>
+              </a>
+            </div>
             <Component 
               {...pageProps} 
               handleSearch={(address: string) => setAddress(address)} // Home
