@@ -14,8 +14,9 @@ Radiance is a Solana Wallet Visualizer / Profiler. Here, you can:
 1. Clone this repo.
 2. ```yarn```
 3. Go to ``node_modules/@flipsidecrypto/sdk/dist/sdk`` and move its contents to ``node_modules/@flipsidecrypto/sdk/dist`` !! IMPORTANT !!
-4. ```yarn dev``` or ```yarn build && yarn start```
-5. Done!
+4. Configure ``.env`` file, should be self explanatory.
+5. ```yarn dev``` or ```yarn build && yarn start```
+6. Done!
 
 ## Notes
 
