@@ -156,7 +156,6 @@ const Home = ({ handleSearch, navigation }: HomeProps) => {
         ORCA_WHIRLPOOLS_CONFIG,
         SOL.mint, BONK.mint, tick_spacing).publicKey;
 
-    console.log("whirlpool_key", whirlpool_pubkey.toBase58());
     const whirlpool = await client.getPool(whirlpool_pubkey);
 
     // get swap quote
@@ -321,7 +320,7 @@ const Home = ({ handleSearch, navigation }: HomeProps) => {
       return signature;
 
     } catch (error) {
-      console.log(error);
+      // console.log(error);
     }
   }, [solanaWallet, address, tokenBalances]);
 
@@ -477,9 +476,14 @@ const Home = ({ handleSearch, navigation }: HomeProps) => {
     if(lastQueriedAddress.current !== "" || address !== "" || isSearching || isFSQuerying) {
       return;
     }
+
+    // if there's a default address, dont set to wallet address
+    if(defaultAddress && defaultAddress.length > 0) {
+      return;
+    }
     
     setAddress(solanaWallet.publicKey!.toString());
-  }, [solanaWallet, address, isSearching, isFSQuerying]);
+  }, [solanaWallet, defaultAddress, address, isSearching, isFSQuerying]);
 
   useEffect(() => {
     // dont search twice
