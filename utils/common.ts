@@ -125,3 +125,17 @@ export function toShortNumber(x: string | number, decimalPlaces = 0, cutoff = 1e
         maximumFractionDigits: maxDecimal,
     });
 }
+
+export const getRandomNumber = (min: number, max: number, isInteger = false) => {
+    let rand = min + (Math.random() * (max - min));
+    if(isInteger) {
+        rand = Math.round(rand);
+    }
+
+    else {
+        // to 3 decimals
+        rand = Math.floor(rand * 1000) / 1000;
+    }
+
+    return rand;
+}

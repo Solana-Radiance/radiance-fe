@@ -103,6 +103,33 @@
                 border-radius: 50%;
                 height: 30vh;
                 width: 30vh;
+
+                > *:not(.bonk) {
+                    border-radius: 50%;
+                }
+
+                > .bonk {
+                    position: absolute;
+                    animation: bonk 1s infinite;
+                    transform-origin: center;
+                    height: 50px;
+                    width: 74px;
+
+                    > span {
+                        display: block !important;
+                    }
+
+                    &.flipped {
+                        animation: bonkFlipped 1s infinite;
+                    }
+
+                    /* for random bonks */
+                    @for $i from 1 through 99 {
+                        &:nth-of-type(#{$i}n) {
+                            animation-delay: #{$i * 0.135}s !important;
+                        }
+                    }
+                }
             }
 
             > div.pfp {
@@ -112,6 +139,7 @@
                 background: linear-gradient(to bottom left, #14f295, #904bf6);
                 font-size: 100px;
                 font-weight: bold;
+                position: relative;
             }
         }
 
@@ -193,6 +221,62 @@
                 height: 40vh;
                 width: 100%;
             }
+        }
+
+        .actions-container {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            margin-top: 10vh;
+
+            > button {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+
+                height: 100px;
+                width: 100px;
+                border-radius: 50%;
+                transition: transform 0.5s;
+
+                border: 2px solid white;
+                background-color: black;
+
+                margin-right: 30px;
+
+                > i {
+                    font-size: 40px;
+                }
+
+                &:not(:nth-child(2)):hover {
+                    transition: transform 0.2s;
+                    transform: scale(1.1);
+                }
+
+                &:nth-child(2) {
+                    background-color: #ce0404;
+                    animation: pulse 1.5s infinite;
+                    &:hover {
+                        transition: transform 2s;
+                        transform: scale(3);
+                    }
+                }
+
+                &:last-child {
+                    margin-right: 0;
+                }
+            }
+        }
+        
+        .meme-container {
+            margin-top: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 25px;
         }
     }
 

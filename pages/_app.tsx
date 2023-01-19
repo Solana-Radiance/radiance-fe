@@ -5,6 +5,7 @@ import './home/index.scss';
 import './swaps/styles.scss';
 import './nfts/styles.scss';
 import './stakes/styles.scss';
+import '../styles/keyframes.scss';
 
 import React, { useCallback, useEffect , useState } from 'react';
 import type { AppProps } from 'next/app';
@@ -123,80 +124,81 @@ function PageLayout({ Component, pageProps }: LayoutProps) {
   );
 
   return (
-    <DialectProviders>
-      <DialectUiManagementProvider>
-        <DialectThemeProvider theme="dark" variables={themeVariables}>
-          <div>
-            {/* Headers */}
-            <header>
-              <div className={`logo ${address.length === ADDRESS_LENGTH? 'active' : ''}`}>
-                <Image src={logo} alt=""/>
-              </div>
-              <SolanaWalletButton />
-            </header>
-            <div className={`sidebar ${address.length === ADDRESS_LENGTH? 'active' : ''}`}>
-              <div className="logo-container">
-                <div className="logo">
-                  <Image src={logo} alt="" />
-                </div>
-              </div>
-              <div
-                className={"link " + (router.pathname === "/home/[[...defaultAddress]]"? "active" : "")}
-              >
-                <Link 
-                  href={{
-                    pathname: `/home/${address}`,
-                  }} 
-                >
-                  <div>Home</div>
-                </Link>
-              </div>
-              <div
-                className={"link " + (router.pathname === "/swaps/[defaultAddress]"? "active" : "")}
-              >
-                <Link 
-                  href={{
-                    pathname: `/swaps/${address}`,
-                  }} 
-                >
-                  <div>Swaps</div>
-                </Link>
-              </div>
-              <div
-                className={"link " + (router.pathname === "/nfts/[defaultAddress]"? "active" : "")}
-              >
-                <Link 
-                  href={{
-                    pathname: `/nfts/${address}`,
-                  }} 
-                >
-                  <div>NFTs</div>
-                </Link>
-
-              </div>
-              <div
-                className={"link " + (router.pathname === "/stakes/[defaultAddress]"? "active" : "")}
-              >
-                <Link 
-                  href={{
-                    pathname: `/stakes/${address}`,
-                  }} 
-                >
-                  <div>Stakes</div>
-                </Link>
-              </div>
-            </div>
-            <Component 
-              {...pageProps} 
-              handleSearch={(address: string) => setAddress(address)} // Home
-            />
-            <BottomChat dialectId="dialect-bottom-chat" />
-            {/* Footers */}
-            {/* <footer>this is a footer</footer> */}
+    <div>
+      {/* Headers */}
+      <header className='main'>
+        <div className={`logo ${address.length === ADDRESS_LENGTH? 'active' : ''}`}>
+          <Image src={logo} alt=""/>
+        </div>
+        <SolanaWalletButton />
+      </header>
+      <div className={`sidebar ${address.length === ADDRESS_LENGTH? 'active' : ''}`}>
+        <div className="logo-container">
+          <div className="logo">
+            <Image src={logo} alt="" />
           </div>
-        </DialectThemeProvider>
-      </DialectUiManagementProvider>
-    </DialectProviders>
+        </div>
+        <div
+          className={"link " + (router.pathname === "/home/[[...defaultAddress]]"? "active" : "")}
+        >
+          <Link 
+            href={{
+              pathname: `/home/${address}`,
+            }} 
+          >
+            <div>Home</div>
+          </Link>
+        </div>
+        <div
+          className={"link " + (router.pathname === "/swaps/[defaultAddress]"? "active" : "")}
+        >
+          <Link 
+            href={{
+              pathname: `/swaps/${address}`,
+            }} 
+          >
+            <div>Swaps</div>
+          </Link>
+        </div>
+        <div
+          className={"link " + (router.pathname === "/nfts/[defaultAddress]"? "active" : "")}
+        >
+          <Link 
+            href={{
+              pathname: `/nfts/${address}`,
+            }} 
+          >
+            <div>NFTs</div>
+          </Link>
+
+        </div>
+        <div
+          className={"link " + (router.pathname === "/stakes/[defaultAddress]"? "active" : "")}
+        >
+          <Link 
+            href={{
+              pathname: `/stakes/${address}`,
+            }} 
+          >
+            <div>Stakes</div>
+          </Link>
+        </div>
+      </div>
+      <Component 
+        {...pageProps} 
+        handleSearch={(address: string) => setAddress(address)}
+      />
+      
+      <DialectProviders>
+        <DialectUiManagementProvider>
+          <DialectThemeProvider theme="dark" variables={themeVariables}>
+            <BottomChat dialectId="dialect-bottom-chat" />
+          </DialectThemeProvider>
+        </DialectUiManagementProvider>
+      </DialectProviders>
+      {/* Footers */}
+      {/* <footer>this is a footer</footer> */}
+    </div>
   );
 }
 

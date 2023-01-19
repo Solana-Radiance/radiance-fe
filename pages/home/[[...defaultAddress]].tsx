@@ -1,11 +1,11 @@
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { GetProgramAccountsFilter, PublicKey } from '@solana/web3.js';
+import { Connection, GetProgramAccountsFilter, PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js';
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { MultiBarGraph } from '../../components/MultiBarGraph';
 import { MultiLineGraph } from '../../components/MultiLineGraph';
 import { ADDRESS_LENGTH } from '../../constants/numbers';
 import { NFT_TX_QUERY, TOKEN_DETAILS_QUERY, WALLET_BALANCE_QUERY, WALLET_DEFI_RANKING_QUERY, WALLET_NFT_RANKING_QUERY } from '../../constants/queries';
-import { ellipsizeThis, runIfFunction, toLocaleDecimal, toShortNumber } from '../../utils/common';
+import { cloneObj, ellipsizeThis, getRandomNumber, runIfFunction, toLocaleDecimal, toShortNumber } from '../../utils/common';
 import { query } from '../../utils/flipside';
 import { getAddressNames, getAddressNFTs } from '../../utils/helius';
 import { NFT } from '../../utils/helius-type';
@@ -13,6 +13,19 @@ import { BalanceData, HomeProps, NFTData, RankData, TokenBalances, TokenData } f
 import moment from 'moment';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import Image from 'next/image';
+import bonk from '../../components/Icon/assets/bonk.png';
+
+import { SignerWalletAdapterProps, WalletNotConnectedError } from '@solana/wallet-adapter-base';
+import {
+  createTransferInstruction,
+  createAssociatedTokenAccountInstruction,
+  getAssociatedTokenAddress,
+  getAccount
+} from '@solana/spl-token';
+
+const BONK_TOKEN_ADDRESS = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
+const MAX_DOGGOS = 25;
 
 const Home = ({ handleSearch }: HomeProps) => {
   const router = useRouter()
@@ -30,9 +43,13 @@ const Home = ({ handleSearch }: HomeProps) => {
   const [isValidAddress, setIsValidAddress] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
   const [isFSQuerying, setIsFSQuerying] = useState(false);
+  const [bonkSize, setBonkSize] = useState(0);
   const lastQueriedAddress = useRef("");
   const {connection} = useConnection();
   const solanaWallet = useWallet();
+
+  // to stop fs queries from updating the amount
+  const currentBonkAmount = useRef(0);
   
 
   useEffect(() => {
@@ -41,15 +58,12 @@ const Home = ({ handleSearch }: HomeProps) => {
     }
     
     if(typeof defaultAddress === "string") {
-      console.log('setting default address: ' + defaultAddress);
       setAddress(defaultAddress);
       handleSearch(defaultAddress);
       return;
     }
 
-    console.log('setting default address');
     setAddress(defaultAddress[0] ?? "");
-    console.log('setting default address: ' + (defaultAddress[0] ?? ""));
     handleSearch(defaultAddress[0] ?? "");
   }, [defaultAddress]);
 
@@ -60,6 +74,172 @@ const Home = ({ handleSearch }: HomeProps) => {
     setIsValidAddress(isValidAddress);
     setAddress(address);
   }, []);
+  
+
+  //get associated token accounts that stores the SPL tokens
+  const getTokenAccounts = useCallback(async(address: string) => {
+    try {
+      const filters: GetProgramAccountsFilter[] = [
+          {
+            dataSize: 165,    //size of account (bytes), this is a constant
+          },
+          {
+            memcmp: {
+              offset: 32,     //location of our query in the account (bytes)
+              bytes: address,  //our search criteria, a base58 encoded string
+            },            
+          }];
+
+      const accounts = await connection.getParsedProgramAccounts(
+          new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'), //Associated Tokens Program
+          {filters: filters}
+      );
+
+      /* accounts.forEach((account, i) => {
+          //Parse the account data
+          const parsedAccountInfo:any = account.account.data;
+          const mintAddress:string = parsedAccountInfo["parsed"]["info"]["mint"];
+          const tokenBalance: number = parsedAccountInfo["parsed"]["info"]["tokenAmount"]["uiAmount"];
+          //Log results
+          console.log(`Token Account No. ${i + 1}: ${account.pubkey.toString()}`);
+          console.log(`--Token Mint: ${mintAddress}`);
+          console.log(`--Token Balance: ${tokenBalance}`);
+      }); */
+      return accounts;
+    }
+
+    catch {
+      return [];
+    }
+  }, [connection]);
+  
+  // BONK!!
+  const sendBonks = useCallback(async(amount: number) => {
+    try {
+      const configureAndSendCurrentTransaction = async (
+        transaction: Transaction,
+        connection: Connection,
+        feePayer: PublicKey,
+        signTransaction: SignerWalletAdapterProps['signTransaction']
+      ) => {
+        const blockHash = await connection.getLatestBlockhash();
+        transaction.feePayer = feePayer;
+        transaction.recentBlockhash = blockHash.blockhash;
+        const signed = await signTransaction(transaction);
+        const signature = await connection.sendRawTransaction(signed.serialize());
+        await connection.confirmTransaction({
+          blockhash: blockHash.blockhash,
+          lastValidBlockHeight: blockHash.lastValidBlockHeight,
+          signature
+        });
+        return signature;
+      };
+
+      let { publicKey, signTransaction } = solanaWallet;
+      if (!publicKey || !signTransaction) {
+        alert('Please connect your wallet!');
+        throw new WalletNotConnectedError();
+      }
+
+      //check if user has bonks
+      let bonkAmount = 0;
+      let userAccounts = await getTokenAccounts(publicKey.toString());
+      for(let account of userAccounts) {
+        let anyAccount = account.account as any;
+        let mint: string = anyAccount.data["parsed"]["info"]["mint"];
+        let accountAmount: number = anyAccount.data["parsed"]["info"]["tokenAmount"]["uiAmount"];
+
+        if(mint !== BONK_TOKEN_ADDRESS) {
+          continue;
+        }
+
+        bonkAmount = accountAmount;
+      }
+
+      if(bonkAmount < amount) {
+        throw new Error("Not enough bonks");
+      }
+
+      const mintToken = new PublicKey(
+        BONK_TOKEN_ADDRESS
+      );
+
+      const recipientAddress = new PublicKey(address);
+
+      const transactionInstructions: TransactionInstruction[] = [];
+
+      // get the sender's token account
+      const associatedTokenFrom = await getAssociatedTokenAddress(
+        mintToken,
+        publicKey
+      );
+
+      const fromAccount = await getAccount(connection, associatedTokenFrom);
+
+      // get the recipient's token account
+      const associatedTokenTo = await getAssociatedTokenAddress(
+        mintToken,
+        recipientAddress
+      );
+
+      // if recipient doesn't have token account
+      // create token account for recipient
+      if (!(await connection.getAccountInfo(associatedTokenTo))) {
+        transactionInstructions.push(
+          createAssociatedTokenAccountInstruction(
+            publicKey,
+            associatedTokenTo,
+            recipientAddress,
+            mintToken
+          )
+        );
+      }
+
+      // the actual instructions
+      transactionInstructions.push(
+        createTransferInstruction(
+          fromAccount.address, // source
+          associatedTokenTo, // dest
+          publicKey,
+          amount * 1e5 // 5 decimals 
+        )
+      );
+
+      // send the transactions
+      const transaction = new Transaction().add(...transactionInstructions);
+      const signature = await configureAndSendCurrentTransaction(
+        transaction,
+        connection,
+        publicKey,
+        signTransaction
+      );
+      
+      // increase bonks
+      let newTokenBalances: TokenBalances = {};
+      if(tokenBalances) {
+        newTokenBalances = cloneObj(tokenBalances);
+      }
+
+      if(!newTokenBalances[BONK_TOKEN_ADDRESS]) {
+        newTokenBalances[BONK_TOKEN_ADDRESS] = {
+          amount: 0,
+          amount_usd: 0,
+          logo: "https://s2.coinmarketcap.com/static/img/coins/64x64/23095.png",
+          name: "BONK",
+        };
+      }
+
+      //clear bonks
+      newTokenBalances[BONK_TOKEN_ADDRESS].amount += amount;
+      currentBonkAmount.current = newTokenBalances[BONK_TOKEN_ADDRESS].amount;
+      setTokenBalances(newTokenBalances);
+      
+      return signature;
+
+    } catch (error) {
+      console.log(error);
+    }
+  }, [solanaWallet, address, tokenBalances]);
 
   // in case we need to update to show balance for each token
   const dates = useMemo(() => {
@@ -203,18 +383,19 @@ const Home = ({ handleSearch }: HomeProps) => {
     return filtered[0];
   }, [activeNFT, nftData]);
 
+  // set wallet address if no default address
   useEffect(() => {
     if(!solanaWallet.connected) {
       return;
     }
 
     // dont override
-    if(lastQueriedAddress.current !== "") {
+    if(lastQueriedAddress.current !== "" || address !== "" || isSearching || isFSQuerying) {
       return;
     }
-
+    
     setAddress(solanaWallet.publicKey!.toString());
-  }, [solanaWallet]);
+  }, [solanaWallet, address, isSearching, isFSQuerying]);
 
   useEffect(() => {
     // dont search twice
@@ -245,6 +426,7 @@ const Home = ({ handleSearch }: HomeProps) => {
     setNFTs([]);
     setActiveNFT(undefined);
     setTokenBalances({});
+    currentBonkAmount.current = 0;
 
     // only reset layout if it's not searched
     if(!defaultAddress) {
@@ -252,53 +434,41 @@ const Home = ({ handleSearch }: HomeProps) => {
     }
     lastQueriedAddress.current = address;
 
-    //get associated token accounts that stores the SPL tokens
-    async function getTokenAccounts() {
-      try {
-        const filters: GetProgramAccountsFilter[] = [
-            {
-              dataSize: 165,    //size of account (bytes), this is a constant
-            },
-            {
-              memcmp: {
-                offset: 32,     //location of our query in the account (bytes)
-                bytes: address,  //our search criteria, a base58 encoded string
-              },            
-            }];
-  
-        const accounts = await connection.getParsedProgramAccounts(
-            new PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'), //Associated Tokens Program
-            {filters: filters}
-        );
-
-        /* accounts.forEach((account, i) => {
-            //Parse the account data
-            const parsedAccountInfo:any = account.account.data;
-            const mintAddress:string = parsedAccountInfo["parsed"]["info"]["mint"];
-            const tokenBalance: number = parsedAccountInfo["parsed"]["info"]["tokenAmount"]["uiAmount"];
-            //Log results
-            console.log(`Token Account No. ${i + 1}: ${account.pubkey.toString()}`);
-            console.log(`--Token Mint: ${mintAddress}`);
-            console.log(`--Token Balance: ${tokenBalance}`);
-        }); */
-        return accounts;
-      }
-
-      catch {
-        return [];
-      }
-    }
-
     //search everything
     const search = async() => {
 
       // solana has different accounts for every token for a given address
-      let accountsRet = await getTokenAccounts();
+      let accountsRet = await getTokenAccounts(address);
       let accounts = accountsRet.map(x => x.pubkey.toString());
       accounts.push(address);
 
       let nonEmptyAccounts = accountsRet.filter((x: any) => x.account.data["parsed"]["info"]["tokenAmount"]["uiAmount"] > 0 && x.account.data["parsed"]["info"]["tokenAmount"]["decimals"] > 0);
       let mints = nonEmptyAccounts.map((x: any) => x.account.data["parsed"]["info"]["mint"]);
+
+      // set the initial token balances and wait for fs
+      let tokenBalances: TokenBalances = {};
+      nonEmptyAccounts.forEach((account: any) => {
+        let mint: string = account.account.data["parsed"]["info"]["mint"];
+        let amount: number = account.account.data["parsed"]["info"]["tokenAmount"]["uiAmount"];
+
+        if(!tokenBalances[mint]) {
+          let name = "";
+          tokenBalances[mint] = {
+            amount: 0,
+            amount_usd: 0,
+            logo: "",
+            name,
+          };
+        }
+
+        tokenBalances[mint].amount += amount;
+      });
+
+      // set current amount
+      if(tokenBalances[BONK_TOKEN_ADDRESS]) {
+        currentBonkAmount.current = tokenBalances[BONK_TOKEN_ADDRESS].amount;
+      }
+      setTokenBalances(tokenBalances);
 
       //get names
       let names = await getAddressNames(address);
@@ -336,7 +506,7 @@ const Home = ({ handleSearch }: HomeProps) => {
       ]);
 
       // get all token balances and map them to the result from fs
-      let tokenBalances: TokenBalances = {};
+      tokenBalances = {};
       nonEmptyAccounts.forEach((account: any) => {
         let mint: string = account.account.data["parsed"]["info"]["mint"];
         let amount: number = account.account.data["parsed"]["info"]["tokenAmount"]["uiAmount"];
@@ -344,9 +514,6 @@ const Home = ({ handleSearch }: HomeProps) => {
 
         if(!tokenBalances[mint]) {
           let name = token && token.symbol? token.symbol : mint.substring(0,3);
-          if(token && token.symbol) {
-
-          }
           tokenBalances[mint] = {
             amount: 0,
             amount_usd: 0,
@@ -358,6 +525,12 @@ const Home = ({ handleSearch }: HomeProps) => {
         tokenBalances[mint].amount += amount;
         tokenBalances[mint].amount_usd += amount * (token?.price ?? 0);
       });
+
+      // we have set it elsewhere
+      if(currentBonkAmount.current > 0) {
+        tokenBalances[BONK_TOKEN_ADDRESS].amount = currentBonkAmount.current;
+      }
+
       setTokenBalances(tokenBalances);
 
       /* if(data) {
@@ -376,10 +549,6 @@ const Home = ({ handleSearch }: HomeProps) => {
         setNFTData(nftData);
       }
 
-      //console.log(data);
-      //console.log(volumeRankData);
-      //console.log(nftRankData);
-
       setIsFSQuerying(false);
 
       // may need to cache the data
@@ -387,6 +556,58 @@ const Home = ({ handleSearch }: HomeProps) => {
     
     search();
   }, [address, isSearching]);
+
+  const Bonks = useCallback(() => {
+    //dont have tokens
+    if(!tokenBalances) {
+      return <div></div>;
+    }
+
+    // dont have bonks
+    if(!tokenBalances[BONK_TOKEN_ADDRESS]) {
+      return <div></div>;
+    }
+
+    let bonkSize = tokenBalances[BONK_TOKEN_ADDRESS].amount;
+    let bonks = Math.floor(bonkSize / 1000); 
+
+    // minimum 1 bonk if the address has bonk tokens
+    if(bonkSize > 0 && bonks === 0) {
+      bonks = 1;
+    }
+
+    if(bonks > MAX_DOGGOS) {
+      bonks = MAX_DOGGOS;
+    }
+
+    setBonkSize(bonks);
+
+    let components = [];
+    for(let i = 0; i < bonks; i++) {
+      let randLeft = getRandomNumber(-5, 90);
+      let randTop = getRandomNumber(-10, 90);
+      let isFlipped = false;
+
+      // CHAOOOOSSS
+      if(randLeft > 30 && randLeft < 70) {
+        let chance = getRandomNumber(1, 100, true);
+        isFlipped = chance < 50;
+      }
+
+      else if(randLeft >= 70) {
+        isFlipped = true;
+      }
+
+
+      components.push(
+        <div key={`bonk-${i}`} className={`${isFlipped? 'flipped' : ''} bonk`} style={{ left: `${randLeft}%`, top: `${randTop}%`}}>
+          <Image unoptimized src={bonk} alt="null" height={50} width={50 * 1.472}/>
+        </div>
+      )
+    }
+
+    return <>{components}</>;
+  }, [tokenBalances]);
 
   return (
       <div className='home-page'>
@@ -417,14 +638,18 @@ const Home = ({ handleSearch }: HomeProps) => {
                     <strong>{toShortNumber(volumeRankData[0]?.total_tx ?? 0, 0)}</strong>
                   </div>
                 </div>
-                {
-                  nfts.length > 0 &&
-                  <img src={nfts[0].imageUrl} alt={nfts[0].name} className='pfp'/>
-                }
-                {
-                  nfts.length === 0 &&
-                  <div className="pfp">{address.substring(0, 2)}</div>
-                }
+                
+                <div className="pfp">
+                  {
+                    nfts.length > 0 &&
+                    <img src={nfts[0].imageUrl} alt={nfts[0].name} className='pfp'/>
+                  }
+                  {
+                    nfts.length === 0 &&
+                    <div>{address.substring(0, 2)}</div>
+                  }
+                  <Bonks/>
+                </div>
                 <div className="details-card-container right">
                   <div className="details-card">
                     <span>NFT Volume (SOL)</span>
@@ -485,6 +710,16 @@ const Home = ({ handleSearch }: HomeProps) => {
                   />
                 </div>
               </div> */}
+              <div className="actions-container">
+                <button><i className="fa fa-message"></i></button>
+                <button onClick={() => sendBonks(1000)}><i className="fa fa-baseball-bat-ball"></i></button>
+                <button>Magic Eden</button>
+              </div>
+              <div className="meme-container">
+                <strong>This address is currently being bonked by {bonkSize? bonkSize : 0} doggo{bonkSize === 1? '' : 's'}{bonkSize <= 10? ', how sad' : ''}.</strong>
+                <strong className='mt-5'>BONK THIS PERSON BY CLICKING THE BIG RED BUTTON!</strong>
+                <strong>1 DOGGO PER 1000 BONKS (MAX 25 DOGGOS)</strong>
+              </div>
             </div>
             {
               tokenBalances && Object.keys(tokenBalances).length > 0 &&

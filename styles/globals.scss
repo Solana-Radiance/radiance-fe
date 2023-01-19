@@ -35,7 +35,7 @@ a {
   }
 }
 
-header {
+header.main {
   position: fixed;
   top: 0;
   left: 0;
@@ -109,7 +109,11 @@ header {
   }
 }
 
-header .logo {
+header.main .wallet-adapter-dropdown {
+  height: fit-content;
+}
+
+header.main .logo {
   color: white;
   transition: transform 0.25s;
   width: 120px;
@@ -120,7 +124,7 @@ header .logo {
   }
 }
 
-header .logo.active {
+header.main .logo.active {
   color: white;
   transform: translateX(320px);
 }
