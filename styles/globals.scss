@@ -128,3 +128,15 @@ header.main .logo.active {
   color: white;
   transform: translateX(320px);
 }
+
+.link-toast {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+
+    > a {
+        color: white !important;
+        text-decoration: none;
+        text-transform: uppercase;
+    }
+}

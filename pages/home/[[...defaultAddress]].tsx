@@ -36,6 +36,8 @@ import {
     swapQuoteByInputToken
 } from "@orca-so/whirlpools-sdk";
 import Decimal from "decimal.js";
+import { toast } from 'react-toastify';
+import { SuccessTxToast } from '../../components/SuccessTxToast';
 
 const BONK_TOKEN_ADDRESS = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
 const MAX_DOGGOS = 25;
@@ -177,6 +179,13 @@ const Home = ({ handleSearch }: HomeProps) => {
     const tx = await whirlpool.swap(quote);
     const signature = await tx.buildAndExecute();
 
+    toast.success(
+      <SuccessTxToast 
+        txId={signature}
+        message={`Ammunition Restocked!`}
+        linkMessage="Proceed with the BONK!"
+      />
+    );
     return signature;
   }, [solanaWallet, connection]);
 
@@ -301,6 +310,13 @@ const Home = ({ handleSearch }: HomeProps) => {
       currentBonkAmount.current = newTokenBalances[BONK_TOKEN_ADDRESS].amount;
       setTokenBalances(newTokenBalances);
       
+      toast.success(
+        <SuccessTxToast 
+          txId={signature}
+          message="BONK! BONK!"
+          linkMessage="BONK! BONK! BONK!"
+        />
+      );
       return signature;
 
     } catch (error) {

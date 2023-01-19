@@ -6,6 +6,7 @@ import './swaps/styles.scss';
 import './nfts/styles.scss';
 import './stakes/styles.scss';
 import '../styles/keyframes.scss';
+import 'react-toastify/dist/ReactToastify.css';
 
 import React, { useCallback, useEffect , useState } from 'react';
 import type { AppProps } from 'next/app';
@@ -38,7 +39,6 @@ import {
   solanaWalletToDialectWallet,
 } from '../utils/wallet';
 import { CivicIdentityResolver } from '@dialectlabs/identity-civic';
-import { NextComponentType, NextPageContext } from 'next';
 import { LayoutProps } from './_app-type';
 import { ADDRESS_LENGTH } from '../constants/numbers';
 
@@ -46,6 +46,7 @@ import logo from '../components/Icon/assets/logo-kida.png';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { ToastContainer } from 'react-toastify';
 
 // TODO: Use useTheme instead of explicitly importing defaultVariables
 export const themeVariables: IncomingThemeVariables = {
@@ -187,6 +188,19 @@ function PageLayout({ Component, pageProps }: LayoutProps) {
       <Component 
         {...pageProps} 
         handleSearch={(address: string) => setAddress(address)}
+      />
+
+      <ToastContainer
+          position="bottom-left"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover={false}
+          theme={'colored'}
       />
       
       <DialectProviders>
