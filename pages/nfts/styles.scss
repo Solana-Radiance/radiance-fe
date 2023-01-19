@@ -42,7 +42,7 @@
         width: 100%;
         flex-direction: column;
 
-        @media screen and (max-width: 1440px) {
+        @media screen and (max-width: 2190px) {
             max-width: calc(1350px - 13vw);
             margin-left: calc(45px + 13vw);
         }
