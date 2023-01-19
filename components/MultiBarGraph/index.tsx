@@ -62,8 +62,10 @@ export const MultiBarGraph = (props: MultiBarGraphProps) => {
                 label,
                 data: values,
                 backgroundColor: colors[colorIndex],
-                borderColor: colors[colorIndex],
                 //pointBackgroundColor: "transparent",
+                borderRadius: Number.MAX_VALUE,
+                barThickness: 15,
+                borderSkipped: false
             })
 
             if(++colorIndex > maxColorIndex) {
@@ -117,7 +119,7 @@ export const MultiBarGraph = (props: MultiBarGraphProps) => {
                                     size: isMobile? 8 : undefined,
                                 },
                                 color: 'white',
-                            }
+                            },
                         },
                         y: {
                             stacked: true,

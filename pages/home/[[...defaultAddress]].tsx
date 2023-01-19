@@ -808,6 +808,8 @@ const Home = ({ handleSearch, navigation }: HomeProps) => {
                 <strong>This address is currently being bonked by {bonkSize? bonkSize : 0} doggo{bonkSize === 1? '' : 's'}{bonkSize <= 10? ', how sad' : ''}.</strong>
                 <strong className='mt-5'>BONK THIS PERSON BY CLICKING THE BIG RED BUTTON!</strong>
                 <strong>1 DOGGO PER 1000 BONKS (MAX 25 DOGGOS)</strong>
+                <strong>WILL SWAP 0.001 SOL TO BONKS IF YOU DONT HAVE ENOUGH</strong>
+                <strong>BONK AWAYYYY</strong>
               </div>
             </div>
             {
