@@ -146,6 +146,9 @@ function PageLayout({ Component, pageProps }: LayoutProps) {
     ]
   );
 
+  // have to do this else the compiler wont compile
+  const AnyComponent = Component as any;
+
   return (
     <div>
       {/* Headers */}
@@ -238,8 +241,7 @@ function PageLayout({ Component, pageProps }: LayoutProps) {
         </div>
       </div>
 
-      {/** ignore the error, it'll compile */}
-      <Component 
+      <AnyComponent 
         {...pageProps} 
         handleSearch={(address: string) => setAddress(address)}
         navigation={navigation}

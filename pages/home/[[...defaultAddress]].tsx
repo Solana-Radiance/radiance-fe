@@ -917,7 +917,7 @@ const Home = ({ handleSearch, navigation }: HomeProps) => {
                           </div>
                           
                           {
-                            isFSQuerying? 'Loading..' : <Link href={`https://solana.fm/tx/${activeNftData?.tx_id}`} target="_blank" rel="noopener noreferrer">{ellipsizeThis(activeNftData?.tx_id ?? "", 4, 4)}</Link> 
+                            isFSQuerying? 'Loading..' : <a href={`https://solana.fm/tx/${activeNftData?.tx_id}`} target="_blank" rel="noopener noreferrer">{ellipsizeThis(activeNftData?.tx_id ?? "", 4, 4)}</a> 
                           }
                         </div>
                     </div>
