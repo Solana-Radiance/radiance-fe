@@ -14,7 +14,8 @@ import moment from 'moment';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Image from 'next/image';
-import bonk from '../../components/Icon/assets/bonk.png';
+import bonkLogo from '../../components/Icon/assets/bonk.png';
+import magicEdenLogo from '../../components/Icon/assets/magiceden.png';
 
 import { SignerWalletAdapterProps, WalletNotConnectedError } from '@solana/wallet-adapter-base';
 
@@ -684,7 +685,7 @@ const Home = ({ handleSearch }: HomeProps) => {
 
       components.push(
         <div key={`bonk-${i}`} className={`${isFlipped? 'flipped' : ''} bonk`} style={{ left: `${randLeft}%`, top: `${randTop}%`}}>
-          <Image unoptimized src={bonk} alt="null" height={50} width={50 * 1.472}/>
+          <Image unoptimized src={bonkLogo} alt="null" height={50} width={50 * 1.472}/>
         </div>
       )
     }
@@ -796,7 +797,7 @@ const Home = ({ handleSearch }: HomeProps) => {
               <div className="actions-container">
                 <button><i className="fa fa-message"></i></button>
                 <button onClick={() => sendBonks(1000)}><i className="fa fa-baseball-bat-ball"></i></button>
-                <button>Magic Eden</button>
+                <a href={`https://magiceden.io/u/${address}`} target="_blank" rel="noopener noreferrer"><Image src={magicEdenLogo} alt="Magic Eden" /></a>
               </div>
               <div className="meme-container">
                 <strong>This address is currently being bonked by {bonkSize? bonkSize : 0} doggo{bonkSize === 1? '' : 's'}{bonkSize <= 10? ', how sad' : ''}.</strong>

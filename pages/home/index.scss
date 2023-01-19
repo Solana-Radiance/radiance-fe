@@ -231,7 +231,8 @@
             width: 100%;
             margin-top: 10vh;
 
-            > button {
+            > button,
+            > a {
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -266,6 +267,10 @@
 
                 &:last-child {
                     margin-right: 0;
+                }
+
+                img {
+                    border-radius: 50%;
                 }
             }
         }
