@@ -17,12 +17,25 @@ import Image from 'next/image';
 import bonk from '../../components/Icon/assets/bonk.png';
 
 import { SignerWalletAdapterProps, WalletNotConnectedError } from '@solana/wallet-adapter-base';
+
 import {
   createTransferInstruction,
   createAssociatedTokenAccountInstruction,
   getAssociatedTokenAddress,
   getAccount
-} from '@solana/spl-token';
+} from '../../spl-token'; // have to do this cause orca-sdk overwrites the spl-token node module
+
+import { DecimalUtil, Percentage } from '@orca-so/common-sdk';
+import {
+    WhirlpoolContext, 
+    AccountFetcher, 
+    ORCA_WHIRLPOOL_PROGRAM_ID, 
+    buildWhirlpoolClient,
+    PDAUtil, 
+    ORCA_WHIRLPOOLS_CONFIG, 
+    swapQuoteByInputToken
+} from "@orca-so/whirlpools-sdk";
+import Decimal from "decimal.js";
 
 const BONK_TOKEN_ADDRESS = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
 const MAX_DOGGOS = 25;
@@ -114,6 +127,59 @@ const Home = ({ handleSearch }: HomeProps) => {
   }, [connection]);
   
   // BONK!!
+
+  const swapBonks = useCallback(async() => {
+    let { publicKey, signTransaction, signAllTransactions } = solanaWallet;
+    if (!publicKey || !signTransaction) {
+      alert('Please connect your wallet!');
+      throw new WalletNotConnectedError();
+    }
+    const wallet = {
+      signTransaction: signTransaction as any, // has to use this to prevent errors
+      signAllTransactions: signAllTransactions as any,
+      publicKey: publicKey
+    }
+
+    const ctx = WhirlpoolContext.from(connection, wallet, ORCA_WHIRLPOOL_PROGRAM_ID);
+    const fetcher = new AccountFetcher(ctx.connection);
+    const client = buildWhirlpoolClient(ctx);
+
+    // get SOL_BONK pool
+    const SOL = {mint: new PublicKey("So11111111111111111111111111111111111111112"), decimals: 9};
+    const BONK = {mint: new PublicKey(BONK_TOKEN_ADDRESS), decimals: 5};
+    const tick_spacing = 64;
+    const whirlpool_pubkey = PDAUtil.getWhirlpool(
+        ORCA_WHIRLPOOL_PROGRAM_ID,
+        ORCA_WHIRLPOOLS_CONFIG,
+        SOL.mint, BONK.mint, tick_spacing).publicKey;
+
+    console.log("whirlpool_key", whirlpool_pubkey.toBase58());
+    const whirlpool = await client.getPool(whirlpool_pubkey);
+
+    // get swap quote
+    const amount_in = new Decimal("0.001" /* SOL */);
+
+    const quote = await swapQuoteByInputToken(
+      whirlpool,
+      SOL.mint,
+      DecimalUtil.toU64(amount_in, SOL.decimals), // toU64 (SOL to lamports)
+      Percentage.fromFraction(10, 1000), // acceptable slippage is 1.0% (10/1000)
+      ctx.program.programId,
+      fetcher,
+      true // refresh
+    );
+
+    // print quote
+    // console.log("estimatedAmountIn", DecimalUtil.fromU64(quote.estimatedAmountIn, SOL.decimals).toString(), "SOL");
+    // console.log("estimatedAmountOut", DecimalUtil.fromU64(quote.estimatedAmountOut, BONK.decimals).toString(), "BONK");
+
+    // execute transaction
+    const tx = await whirlpool.swap(quote);
+    const signature = await tx.buildAndExecute();
+
+    return signature;
+  }, [solanaWallet, connection]);
+
   const sendBonks = useCallback(async(amount: number) => {
     try {
       const configureAndSendCurrentTransaction = async (
@@ -157,7 +223,8 @@ const Home = ({ handleSearch }: HomeProps) => {
       }
 
       if(bonkAmount < amount) {
-        throw new Error("Not enough bonks");
+        await swapBonks();
+        //throw new Error("Not enough bonks");
       }
 
       const mintToken = new PublicKey(
