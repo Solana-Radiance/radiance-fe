@@ -298,6 +298,14 @@ function MyApp({ Component, pageProps }: AppProps) {
           crossOrigin="anonymous" 
           referrerPolicy="no-referrer" 
         />
+        
+        <link rel="shortcut icon" href="/static/favicon.ico" />
+        
+        <meta
+          name="description"
+          content="Solana Profiler by Kida. Discord: Kida#8864, twitter: @darksoulsfanlol"
+        />
+        <title>Radiance</title>
       </Head>
       {/* Contexts */}
       <SolanaWalletContext>
