@@ -1,6 +1,11 @@
 import { BaseProps } from "../_app-type";
 
-export interface HomeProps extends BaseProps {}
+export interface HomeProps extends BaseProps {
+    navigation: {
+        navigation: any;  /* not exported */
+        open: () => void;
+    }; // navigator not exported
+}
 
 export interface BalanceData {
     date: string;

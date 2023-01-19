@@ -8,3 +8,13 @@ export interface LayoutProps {
 export interface BaseProps {
     handleSearch: (address: string) => void;
 }
+
+export interface BottomChatWrapperProps {
+    handleNavigation: ({
+        navigation,
+        open
+    }: {
+        navigation: any;  /* not exported */
+        open: () => void;
+    }) => void;
+}

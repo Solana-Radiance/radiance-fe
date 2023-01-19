@@ -23,12 +23,14 @@ import {
 } from '@dialectlabs/react-sdk-blockchain-solana';
 import {
   BottomChat,
+  ChatNavigationHelpers,
   ConfigProps,
   defaultVariables,
   DialectNoBlockchainSdk,
   DialectThemeProvider,
   DialectUiManagementProvider,
   IncomingThemeVariables,
+  useDialectUiId,
 } from '@dialectlabs/react-ui';
 import {
   useConnection as useSolanaConnection,
@@ -39,7 +41,7 @@ import {
   solanaWalletToDialectWallet,
 } from '../utils/wallet';
 import { CivicIdentityResolver } from '@dialectlabs/identity-civic';
-import { LayoutProps } from './_app-type';
+import { BottomChatWrapperProps, LayoutProps } from './_app-type';
 import { ADDRESS_LENGTH } from '../constants/numbers';
 
 import logo from '../components/Icon/assets/logo-kida.png';
@@ -74,6 +76,23 @@ export const themeVariables: IncomingThemeVariables = {
   },
 };
 
+const BottomChatWrapper = ({ handleNavigation }: BottomChatWrapperProps) => {
+  const { ui, open, close, navigation } = useDialectUiId<ChatNavigationHelpers>(
+    'dialect-bottom-chat'
+  );
+
+  useEffect(() => {
+    handleNavigation({
+      navigation,
+      open
+    });
+  }, [handleNavigation, navigation, open]);
+
+  return (
+    <BottomChat dialectId="dialect-bottom-chat" />
+  )
+}
+
 function PageLayout({ Component, pageProps }: LayoutProps) {
   const { connection: solanaConnection } = useSolanaConnection();
   const [address, setAddress] = useState("");
@@ -82,6 +101,9 @@ function PageLayout({ Component, pageProps }: LayoutProps) {
 
   const [dialectSolanaWalletAdapter, setDialectSolanaWalletAdapter] =
     useState<DialectSolanaWalletAdapter | null>(null);
+
+  // to pass bottom chat navigation params
+  const [navigation, setNavigation] = useState<any>(); // navigator not exported
 
   useEffect(() => {
     setDialectSolanaWalletAdapter(solanaWalletToDialectWallet(solanaWallet));
@@ -188,6 +210,7 @@ function PageLayout({ Component, pageProps }: LayoutProps) {
       <Component 
         {...pageProps} 
         handleSearch={(address: string) => setAddress(address)}
+        navigation={navigation}
       />
 
       <ToastContainer
@@ -206,7 +229,9 @@ function PageLayout({ Component, pageProps }: LayoutProps) {
       <DialectProviders>
         <DialectUiManagementProvider>
           <DialectThemeProvider theme="dark" variables={themeVariables}>
-            <BottomChat dialectId="dialect-bottom-chat" />
+            <BottomChatWrapper 
+              handleNavigation={setNavigation} 
+            />
           </DialectThemeProvider>
         </DialectUiManagementProvider>
       </DialectProviders>

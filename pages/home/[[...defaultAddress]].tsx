@@ -43,7 +43,7 @@ import { SuccessTxToast } from '../../components/SuccessTxToast';
 const BONK_TOKEN_ADDRESS = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
 const MAX_DOGGOS = 25;
 
-const Home = ({ handleSearch }: HomeProps) => {
+const Home = ({ handleSearch, navigation }: HomeProps) => {
   const router = useRouter()
   const { defaultAddress } = router.query;
   const [address, setAddress] = useState("");
@@ -795,7 +795,12 @@ const Home = ({ handleSearch }: HomeProps) => {
                 </div>
               </div> */}
               <div className="actions-container">
-                <button><i className="fa fa-message"></i></button>
+                <button onClick={() => {
+                  // open and send message
+                  let { navigation: chatNavigation, open } = navigation;
+                  runIfFunction(open);
+                  chatNavigation?.showCreateThread(address);
+                }}><i className="fa fa-message"></i></button>
                 <button onClick={() => sendBonks(1000)}><i className="fa fa-baseball-bat-ball"></i></button>
                 <a href={`https://magiceden.io/u/${address}`} target="_blank" rel="noopener noreferrer"><Image src={magicEdenLogo} alt="Magic Eden" /></a>
               </div>
