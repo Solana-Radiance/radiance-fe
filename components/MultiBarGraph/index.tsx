@@ -64,7 +64,7 @@ export const MultiBarGraph = (props: MultiBarGraphProps) => {
                 backgroundColor: colors[colorIndex],
                 //pointBackgroundColor: "transparent",
                 borderRadius: Number.MAX_VALUE,
-                barThickness: 15,
+                maxBarThickness: 15,
                 borderSkipped: false
             })
 

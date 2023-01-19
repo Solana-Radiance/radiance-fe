@@ -38,9 +38,14 @@
     }
     
     > div.profile {
-        max-width: 1080px;
+        max-width: 1440px;
         width: 100%;
         flex-direction: column;
+
+        @media screen and (max-width: 1440px) {
+            max-width: calc(1350px - 13vw);
+            margin-left: calc(45px + 13vw);
+        }
     }
 
     .graph-container {
@@ -61,6 +66,7 @@
 
         > div.table {
             height: 1000px;
+            max-height: 80vh;
             border: 1px solid white;
             border-radius: 10px;
             width: 100%;

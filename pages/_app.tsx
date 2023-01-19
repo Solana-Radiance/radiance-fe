@@ -207,6 +207,8 @@ function PageLayout({ Component, pageProps }: LayoutProps) {
           </Link>
         </div>
       </div>
+
+      {/** ignore the error, it'll compile */}
       <Component 
         {...pageProps} 
         handleSearch={(address: string) => setAddress(address)}

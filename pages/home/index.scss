@@ -259,6 +259,7 @@
                 &:nth-child(2) {
                     background-color: #ce0404;
                     animation: pulse 1.5s infinite;
+                    z-index: 9;
                     &:hover {
                         transition: transform 2s;
                         transform: scale(3);
