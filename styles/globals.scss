@@ -115,6 +115,11 @@ header.main {
     position: absolute;
     bottom: 30px;
 
+    @media screen and (max-width: 1440px) {
+      transform: scale(0.75);
+      transform-origin: bottom;
+    }
+
     > div.created-by {
       display: flex;
       flex-direction: column;
