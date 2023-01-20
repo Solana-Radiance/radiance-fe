@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import { useRouter } from 'next/router';
-import { ADDRESS_LENGTH, DATA_PER_PAGE } from '../../constants/numbers';
+import { MAX_ADDRESS_LENGTH, DATA_PER_PAGE, MIN_ADDRESS_LENGTH } from '../../constants/numbers';
 import { SwapsProps, TxData, VolumeData } from './types';
 import { GetProgramAccountsFilter, PublicKey } from '@solana/web3.js';
 import { ellipsizeThis, runIfFunction, toLocaleDecimal, toShortNumber } from '../../utils/common';
@@ -28,7 +28,7 @@ const Swaps = ({ handleSearch }: SwapsProps) => {
 
     const onAddressInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       let address = e.target.value;
-      let isValidAddress = (address.length === ADDRESS_LENGTH || address.length === 0);
+      let isValidAddress = ((address.length >= MIN_ADDRESS_LENGTH && address.length <= MAX_ADDRESS_LENGTH) || address.length === 0);
   
       setIsValidAddress(isValidAddress);
       setAddress(address);
@@ -177,7 +177,11 @@ const Swaps = ({ handleSearch }: SwapsProps) => {
         return;
       }
 
-      if(address.length !== ADDRESS_LENGTH) {
+      if(address.length < MIN_ADDRESS_LENGTH) {
+        return;
+      }
+
+      if(address.length > MAX_ADDRESS_LENGTH) {
         return;
       }
       

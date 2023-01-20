@@ -42,7 +42,7 @@ import {
 } from '../utils/wallet';
 import { CivicIdentityResolver } from '@dialectlabs/identity-civic';
 import { BottomChatWrapperProps, LayoutProps } from './_app-type';
-import { ADDRESS_LENGTH } from '../constants/numbers';
+import { MAX_ADDRESS_LENGTH, MIN_ADDRESS_LENGTH } from '../constants/numbers';
 
 import logo from '../components/Icon/assets/logo-kida.png';
 import Image from 'next/image';
@@ -153,12 +153,12 @@ function PageLayout({ Component, pageProps }: LayoutProps) {
     <div>
       {/* Headers */}
       <header className='main'>
-        <div className={`logo ${address.length === ADDRESS_LENGTH? 'active' : ''}`}>
+        <div className={`logo ${address.length >= MIN_ADDRESS_LENGTH && address.length <= MAX_ADDRESS_LENGTH? 'active' : ''}`}>
           <Image src={logo} alt=""/>
         </div>
         <SolanaWalletButton />
       </header>
-      <div className={`sidebar ${address.length === ADDRESS_LENGTH? 'active' : ''}`}>
+      <div className={`sidebar ${address.length >= MIN_ADDRESS_LENGTH && address.length <= MAX_ADDRESS_LENGTH? 'active' : ''}`}>
         <div className="logo-container">
           <div className="logo">
             <Image src={logo} alt="" />

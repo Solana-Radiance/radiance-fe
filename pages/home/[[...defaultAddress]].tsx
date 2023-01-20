@@ -3,7 +3,7 @@ import { Connection, GetProgramAccountsFilter, PublicKey, Transaction, Transacti
 import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { MultiBarGraph } from '../../components/MultiBarGraph';
 import { MultiLineGraph } from '../../components/MultiLineGraph';
-import { ADDRESS_LENGTH } from '../../constants/numbers';
+import { MAX_ADDRESS_LENGTH, MIN_ADDRESS_LENGTH } from '../../constants/numbers';
 import { NFT_TX_QUERY, TOKEN_DETAILS_QUERY, WALLET_BALANCE_QUERY, WALLET_DEFI_RANKING_QUERY, WALLET_NFT_RANKING_QUERY } from '../../constants/queries';
 import { cloneObj, ellipsizeThis, getRandomNumber, runIfFunction, toLocaleDecimal, toShortNumber } from '../../utils/common';
 import { query } from '../../utils/flipside';
@@ -85,7 +85,7 @@ const Home = ({ handleSearch, navigation }: HomeProps) => {
 
   const onAddressInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     let address = e.target.value;
-    let isValidAddress = (address.length === ADDRESS_LENGTH || address.length === 0);
+    let isValidAddress = ((address.length >= MIN_ADDRESS_LENGTH && address.length <= MAX_ADDRESS_LENGTH) || address.length === 0);
 
     setIsValidAddress(isValidAddress);
     setAddress(address);
@@ -501,9 +501,17 @@ const Home = ({ handleSearch, navigation }: HomeProps) => {
       return;
     }
 
-    if(address.length !== ADDRESS_LENGTH) {
+    if(address.length < MIN_ADDRESS_LENGTH) {
+      runIfFunction(handleSearch, "");
       return;
     }
+
+    if(address.length > MAX_ADDRESS_LENGTH) {
+      runIfFunction(handleSearch, "");
+      return;
+    }
+
+    console.log(address.length);
     
     setIsSearching(true);
     //reset
@@ -700,7 +708,7 @@ const Home = ({ handleSearch, navigation }: HomeProps) => {
   return (
       <div className='home-page'>
           {/** is searching valid address or has a default address */}
-          <strong className={!isSearching && address.length === ADDRESS_LENGTH? 'hidden' : ''}>Search any address or connect your wallet to get started!</strong>
+          <strong className={!isSearching && address.length >= MIN_ADDRESS_LENGTH && address.length <= MAX_ADDRESS_LENGTH? 'hidden' : ''}>Search any address or connect your wallet to get started!</strong>
           <div className='relative search'>
             <input type="text" placeholder='Solana Address' value={address} onChange={onAddressInputChange} disabled={isSearching || isFSQuerying}/>
             {
@@ -713,7 +721,7 @@ const Home = ({ handleSearch, navigation }: HomeProps) => {
             }
           </div>
           {/** is searching valid address or has a default address */}
-          <div className={`${!isSearching && address.length === ADDRESS_LENGTH? 'flex' : 'hidden'} h-full profile`}>
+          <div className={`${!isSearching && address.length >= MIN_ADDRESS_LENGTH && address.length <= MAX_ADDRESS_LENGTH? 'flex' : 'hidden'} h-full profile`}>
             <div className="details-container">
               <div className="pfp-container">
                 <div className="details-card-container left">

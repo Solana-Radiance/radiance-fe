@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import { useRouter } from 'next/router';
-import { ADDRESS_LENGTH, NFT_DATA_PER_PAGE } from '../../constants/numbers';
+import { MAX_ADDRESS_LENGTH, MIN_ADDRESS_LENGTH, NFT_DATA_PER_PAGE } from '../../constants/numbers';
 import { NftMetadata, NftsProps, TxData, VolumeData } from './types';
 import { GetProgramAccountsFilter, PublicKey } from '@solana/web3.js';
 import { ellipsizeThis, runIfFunction, toLocaleDecimal, toShortNumber } from '../../utils/common';
@@ -30,7 +30,7 @@ const Nfts = ({ handleSearch }: NftsProps) => {
 
     const onAddressInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
       let address = e.target.value;
-      let isValidAddress = (address.length === ADDRESS_LENGTH || address.length === 0);
+      let isValidAddress = ((address.length >= MIN_ADDRESS_LENGTH && address.length <= MAX_ADDRESS_LENGTH) || address.length === 0);
   
       setIsValidAddress(isValidAddress);
       setAddress(address);
@@ -160,7 +160,7 @@ const Nfts = ({ handleSearch }: NftsProps) => {
       }
   
       let graphData: {[name: string]: number[]} = {};
-      graphData['Profit (SOL)'] = volumeData.map(x => x.total_profit_usd);
+      graphData['Profit (USD)'] = volumeData.map(x => x.total_profit_usd);
       return graphData;
     }, [volumeData]);
 
@@ -170,7 +170,7 @@ const Nfts = ({ handleSearch }: NftsProps) => {
       }
   
       let graphData: {[name: string]: number[]} = {};
-      graphData['Cumulative Profit (SOL)'] = volumeData.map(x => x.cumulative_profit_usd);
+      graphData['Cumulative Profit (USD)'] = volumeData.map(x => x.cumulative_profit_usd);
       return graphData;
     }, [volumeData]);
 
@@ -221,7 +221,11 @@ const Nfts = ({ handleSearch }: NftsProps) => {
           return;
         }
 
-        if(address.length !== ADDRESS_LENGTH) {
+        if(address.length < MIN_ADDRESS_LENGTH) {
+          return;
+        }
+
+        if(address.length > MAX_ADDRESS_LENGTH) {
           return;
         }
         
